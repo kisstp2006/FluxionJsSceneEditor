@@ -84,33 +84,119 @@ namespace FluxionJsSceneEditor
         public static string Serialize(SceneModel scene)
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"<Scene Name=\"{Escape(scene.Name)}\">");
-            sb.AppendLine($"  <Camera Name=\"{Escape(scene.Camera.Name)}\" X=\"{scene.Camera.X}\" Y=\"{scene.Camera.Y}\" Zoom=\"{scene.Camera.Zoom}\" Width=\"{scene.Camera.Width}\" Height=\"{scene.Camera.Height}\" />");
-            sb.AppendLine("  <Elements>");
+            sb.AppendLine($"<Scene name=\"{Escape(scene.Name)}\">");
+
+            sb.AppendLine(
+                $"    <Camera name=\"{Escape(scene.Camera.Name)}\" " +
+                $"x=\"{scene.Camera.X.ToString(CultureInfo.InvariantCulture)}\" " +
+                $"y=\"{scene.Camera.Y.ToString(CultureInfo.InvariantCulture)}\" " +
+                $"zoom=\"{scene.Camera.Zoom.ToString(CultureInfo.InvariantCulture)}\" " +
+                $"width=\"{scene.Camera.Width.ToString(CultureInfo.InvariantCulture)}\" " +
+                $"height=\"{scene.Camera.Height.ToString(CultureInfo.InvariantCulture)}\" />");
+
+            sb.AppendLine("    ");
+
+            // Map Clickable elements to nested <ClickableArea/> inside the owning <Sprite>.
+            var clickableByName = new Dictionary<string, ClickableElement>(StringComparer.OrdinalIgnoreCase);
+            foreach (var el in scene.Elements)
+            {
+                if (el is ClickableElement ce)
+                    clickableByName[ce.Name] = ce;
+            }
+
+            var consumedClickables = new HashSet<ClickableElement>();
 
             foreach (var el in scene.Elements)
             {
                 switch (el)
                 {
-                    case SpriteElement se:
-                        sb.AppendLine($"    <Sprite Name=\"{Escape(se.Name)}\" X=\"{se.X}\" Y=\"{se.Y}\" Width=\"{se.Width}\" Height=\"{se.Height}\" ImageSrc=\"{Escape(se.ImageSrc ?? string.Empty)}\" />");
-                        break;
-                    case AudioElement ae:
-                        sb.AppendLine($"    <Audio Name=\"{Escape(ae.Name)}\" Src=\"{Escape(ae.Src ?? string.Empty)}\" Loop=\"{ae.Loop}\" Autoplay=\"{ae.Autoplay}\" />");
-                        break;
-                    case ClickableElement ce:
-                        sb.AppendLine($"    <Clickable Name=\"{Escape(ce.Name)}\" X=\"{ce.X}\" Y=\"{ce.Y}\" Width=\"{ce.Width}\" Height=\"{ce.Height}\" HasClickableArea=\"{ce.HasClickableArea}\" />");
-                        break;
                     case TextElement te:
-                        sb.AppendLine($"    <Text Name=\"{Escape(te.Name)}\" Text=\"{Escape(te.Text ?? string.Empty)}\" X=\"{te.X}\" Y=\"{te.Y}\" FontSize=\"{te.FontSize}\" FontFamily=\"{Escape(te.FontFamily ?? string.Empty)}\" Color=\"{Escape(te.Color ?? string.Empty)}\" />");
+                        sb.AppendLine(
+                            $"    <Text " +
+                            $"name=\"{Escape(te.Name)}\" " +
+                            $"text=\"{Escape(te.Text ?? string.Empty)}\" " +
+                            $"x=\"{te.X.ToString(CultureInfo.InvariantCulture)}\" " +
+                            $"y=\"{te.Y.ToString(CultureInfo.InvariantCulture)}\" " +
+                            $"fontSize=\"{te.FontSize.ToString(CultureInfo.InvariantCulture)}\" " +
+                            $"fontFamily=\"{Escape(te.FontFamily ?? string.Empty)}\" " +
+                            $"color=\"{Escape(te.Color ?? string.Empty)}\" />");
                         break;
+
+                    case AudioElement ae:
+                        sb.AppendLine(
+                            $"    <Audio " +
+                            $"name=\"{Escape(ae.Name)}\" " +
+                            $"src=\"{Escape(ae.Src ?? string.Empty)}\" " +
+                            $"loop=\"{ae.Loop.ToString().ToLowerInvariant()}\" " +
+                            $"autoplay=\"{ae.Autoplay.ToString().ToLowerInvariant()}\" />");
+                        break;
+
+                    case SpriteElement se:
+                    {
+                        // Try to find a matching clickable.
+                        ClickableElement? ce = null;
+
+                        // Preferred: clickable with the conventional name "<SpriteName>Hitbox" or "<SpriteName>_ClickableArea".
+                        if (clickableByName.TryGetValue(se.Name + "Hitbox", out var hitbox))
+                            ce = hitbox;
+                        else if (clickableByName.TryGetValue(se.Name + "_ClickableArea", out var ca))
+                            ce = ca;
+                        else
+                        {
+                            // Fallback: any clickable with identical bounds.
+                            foreach (var cand in clickableByName.Values)
+                            {
+                                if (consumedClickables.Contains(cand))
+                                    continue;
+                                if (Math.Abs(cand.X - se.X) < 1e-6 && Math.Abs(cand.Y - se.Y) < 1e-6 &&
+                                    Math.Abs(cand.Width - se.Width) < 1e-6 && Math.Abs(cand.Height - se.Height) < 1e-6 &&
+                                    cand.HasClickableArea)
+                                {
+                                    ce = cand;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (ce is { HasClickableArea: true })
+                        {
+                            consumedClickables.Add(ce);
+
+                            sb.AppendLine(
+                                $"    <Sprite " +
+                                $"name=\"{Escape(se.Name)}\" " +
+                                $"imageSrc=\"{Escape(se.ImageSrc ?? string.Empty)}\" " +
+                                $"x=\"{se.X.ToString(CultureInfo.InvariantCulture)}\" " +
+                                $"y=\"{se.Y.ToString(CultureInfo.InvariantCulture)}\" " +
+                                $"width=\"{se.Width.ToString(CultureInfo.InvariantCulture)}\" " +
+                                $"height=\"{se.Height.ToString(CultureInfo.InvariantCulture)}\">" );
+                            sb.AppendLine($"        <ClickableArea name=\"{Escape(ce.Name)}\" />");
+                            sb.AppendLine("    </Sprite>");
+                        }
+                        else
+                        {
+                            sb.AppendLine(
+                                $"    <Sprite " +
+                                $"name=\"{Escape(se.Name)}\" " +
+                                $"imageSrc=\"{Escape(se.ImageSrc ?? string.Empty)}\" " +
+                                $"x=\"{se.X.ToString(CultureInfo.InvariantCulture)}\" " +
+                                $"y=\"{se.Y.ToString(CultureInfo.InvariantCulture)}\" " +
+                                $"width=\"{se.Width.ToString(CultureInfo.InvariantCulture)}\" " +
+                                $"height=\"{se.Height.ToString(CultureInfo.InvariantCulture)}\" />");
+                        }
+
+                        break;
+                    }
+
+                    case ClickableElement:
+                        // Clickables are serialized as nested <ClickableArea/> inside sprites.
+                        break;
+
                     default:
-                        sb.AppendLine($"    <Element Type=\"{Escape(el.ElementType)}\" Name=\"{Escape(el.Name)}\" />");
                         break;
                 }
             }
 
-            sb.AppendLine("  </Elements>");
             sb.AppendLine("</Scene>");
             return sb.ToString();
         }

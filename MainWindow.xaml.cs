@@ -192,13 +192,315 @@ namespace FluxionJsSceneEditor
         private double _gizmoStartX;
         private double _gizmoStartY;
 
+        private bool _isStartingEngine;
+
+        private static async System.Threading.Tasks.Task<int> RunProcessAsync(string fileName, string arguments, string workingDirectory, Action<string> onOutput)
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                WorkingDirectory = workingDirectory,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using var proc = new System.Diagnostics.Process { StartInfo = psi, EnableRaisingEvents = true };
+
+            proc.OutputDataReceived += (_, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    onOutput(e.Data);
+            };
+
+            proc.ErrorDataReceived += (_, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                    onOutput(e.Data);
+            };
+
+            if (!proc.Start())
+                throw new InvalidOperationException($"Failed to start process: {fileName}");
+
+            proc.BeginOutputReadLine();
+            proc.BeginErrorReadLine();
+
+            await proc.WaitForExitAsync().ConfigureAwait(false);
+            return proc.ExitCode;
+        }
+
+        private bool _showShortcuts = true;
+        private string? _clipboardElementXml;
+
+        private void ApplySceneHeaderFromUi()
+        {
+            _scene.Name = SceneNameTextBox.Text;
+            _scene.Camera.X = ParseDoubleSafe(CameraXTextBox.Text);
+            _scene.Camera.Y = ParseDoubleSafe(CameraYTextBox.Text);
+            _scene.Camera.Zoom = ParseDoubleSafe(CameraZoomTextBox.Text);
+        }
+
+        private void ToggleShortcuts()
+        {
+            _showShortcuts = !_showShortcuts;
+            if (ShortcutsPanel != null)
+                ShortcutsPanel.Visibility = _showShortcuts ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void CopySelectedElement()
+        {
+            if (_selected == null)
+                return;
+
+            // Serialize a single element using the existing scene serializer format.
+            var temp = new SceneModel { Name = "Clipboard" };
+            temp.Camera = new CameraModel { X = 0, Y = 0, Zoom = 1 };
+            temp.Elements.Add(_selected);
+
+            _clipboardElementXml = SceneSerializer.Serialize(temp);
+            System.Windows.Clipboard.SetText(_clipboardElementXml);
+            StatusTextBlock.Text = $"Copied {_selected.ElementType}";
+        }
+
+        private void PasteElement()
+        {
+            var xml = _clipboardElementXml;
+            if (string.IsNullOrWhiteSpace(xml))
+            {
+                try
+                {
+                    xml = System.Windows.Clipboard.GetText();
+                }
+                catch
+                {
+                    xml = null;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(xml))
+                return;
+
+            SceneModel parsed;
+            try
+            {
+                parsed = SceneSerializer.Deserialize(xml);
+            }
+            catch
+            {
+                return;
+            }
+
+            if (parsed.Elements.Count == 0)
+                return;
+
+            var el = parsed.Elements[0];
+
+            // Offset pasted element slightly so it's visible.
+            el.Name = el.Name + "_copy";
+            el.X += 20;
+            el.Y += 20;
+
+            _scene.Elements.Add(el);
+            SelectElement(el);
+            RefreshHierarchy();
+            RefreshCanvas();
+            StatusTextBlock.Text = $"Pasted {el.ElementType}";
+        }
+
+        private void RemoveSelectedElement()
+        {
+            if (_selected == null)
+                return;
+
+            _scene.Elements.Remove(_selected);
+            _selected = null;
+            SetPropertiesPanelVisibility(null);
+            RefreshHierarchy();
+            RefreshCanvas();
+            StatusTextBlock.Text = "Element removed";
+        }
+
+        private void OpenSceneDialog()
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Scene files (*.xml;*.xaml)|*.xml;*.xaml|All files (*.*)|*.*",
+                Title = "Open Scene"
+            };
+
+            if (dlg.ShowDialog(this) == true)
+            {
+                try
+                {
+                    LoadSceneFromFile(dlg.FileName);
+                    StatusTextBlock.Text = $"Loaded scene: {System.IO.Path.GetFileName(dlg.FileName)}";
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show(this, ex.Message, "Open Scene Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void SaveSceneDialog()
+        {
+            // If a scene was opened from disk, treat Ctrl+S / Save as "save back to the same file".
+            if (!string.IsNullOrWhiteSpace(_loadedSceneFilePath))
+            {
+                try
+                {
+                    ApplySceneHeaderFromUi();
+                    var xml = SceneSerializer.Serialize(_scene);
+                    File.WriteAllText(_loadedSceneFilePath, xml);
+                    StatusTextBlock.Text = $"Saved scene: {System.IO.Path.GetFileName(_loadedSceneFilePath)}";
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show(this, ex.Message, "Save Scene Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+
+                return;
+            }
+
+            // New scene: ask where to save.
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "Scene files (*.xml;*.xaml)|*.xml;*.xaml|All files (*.*)|*.*",
+                Title = "Save Scene",
+                FileName = "scene.xml"
+            };
+
+            if (dlg.ShowDialog(this) == true)
+            {
+                ApplySceneHeaderFromUi();
+                var xml = SceneSerializer.Serialize(_scene);
+                File.WriteAllText(dlg.FileName, xml);
+                _loadedSceneFilePath = dlg.FileName;
+                StatusTextBlock.Text = $"Saved scene: {System.IO.Path.GetFileName(dlg.FileName)}";
+            }
+        }
+
+        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                switch (e.Key)
+                {
+                    case Key.N:
+                        NewScene();
+                        e.Handled = true;
+                        return;
+                    case Key.O:
+                        OpenSceneDialog();
+                        e.Handled = true;
+                        return;
+                    case Key.S:
+                        SaveSceneDialog();
+                        e.Handled = true;
+                        return;
+                    case Key.C:
+                        CopySelectedElement();
+                        e.Handled = true;
+                        return;
+                    case Key.V:
+                        PasteElement();
+                        e.Handled = true;
+                        return;
+                    case Key.Oem2: // '/'
+                        ToggleShortcuts();
+                        e.Handled = true;
+                        return;
+                }
+            }
+
+            if (e.Key == Key.Delete)
+            {
+                RemoveSelectedElement();
+                e.Handled = true;
+                return;
+            }
+        }
+
+        private void ApplyTheme(bool isDark)
+        {
+            // Update app-scoped theme brushes so existing DynamicResource bindings refresh automatically.
+            var r = System.Windows.Application.Current?.Resources;
+            if (r == null)
+                return;
+
+            static System.Windows.Media.SolidColorBrush B(byte r, byte g, byte b)
+                => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+
+            if (isDark)
+            {
+                r["App.BackgroundBrush"] = B(0x1E, 0x1E, 0x1E);
+                r["App.PanelBrush"] = B(0x2B, 0x2B, 0x2B);
+                r["App.PanelAltBrush"] = B(0x2A, 0x2A, 0x2A);
+                r["App.SurfaceBrush"] = B(0x33, 0x33, 0x33);
+                r["App.BorderBrush"] = B(0x44, 0x44, 0x44);
+                r["App.TextBrush"] = B(0xFF, 0xFF, 0xFF);
+                r["App.SubtleTextBrush"] = B(0xDD, 0xDD, 0xDD);
+                r["App.MutedTextBrush"] = B(0xBB, 0xBB, 0xBB);
+                r["App.AccentBrush"] = B(0x4F, 0xC3, 0xF7);
+                r["App.GridSplitterBrush"] = B(0x44, 0x44, 0x44);
+
+                r["App.ControlBackgroundBrush"] = B(0x2F, 0x2F, 0x2F);
+                r["App.ControlForegroundBrush"] = B(0xFF, 0xFF, 0xFF);
+                r["App.ControlBorderBrush"] = B(0x55, 0x55, 0x55);
+                r["App.ControlDisabledBrush"] = B(0x77, 0x77, 0x77);
+                r["App.SelectionBrush"] = B(0x4F, 0xC3, 0xF7);
+                r["App.SelectionTextBrush"] = B(0x00, 0x00, 0x00);
+            }
+            else
+            {
+                r["App.BackgroundBrush"] = B(0xF4, 0xF4, 0xF6);
+                r["App.PanelBrush"] = B(0xFF, 0xFF, 0xFF);
+                r["App.PanelAltBrush"] = B(0xF0, 0xF0, 0xF2);
+                r["App.SurfaceBrush"] = B(0xFF, 0xFF, 0xFF);
+                r["App.BorderBrush"] = B(0xD0, 0xD0, 0xD4);
+                r["App.TextBrush"] = B(0x1E, 0x1E, 0x1E);
+                r["App.SubtleTextBrush"] = B(0x33, 0x33, 0x33);
+                r["App.MutedTextBrush"] = B(0x55, 0x55, 0x55);
+                r["App.AccentBrush"] = B(0x00, 0x78, 0xD4);
+                r["App.GridSplitterBrush"] = B(0xD0, 0xD0, 0xD4);
+
+                r["App.ControlBackgroundBrush"] = B(0xFF, 0xFF, 0xFF);
+                r["App.ControlForegroundBrush"] = B(0x1E, 0x1E, 0x1E);
+                r["App.ControlBorderBrush"] = B(0xC8, 0xC8, 0xCC);
+                r["App.ControlDisabledBrush"] = B(0xA0, 0xA0, 0xA0);
+                r["App.SelectionBrush"] = B(0x00, 0x78, 0xD4);
+                r["App.SelectionTextBrush"] = B(0xFF, 0xFF, 0xFF);
+            }
+        }
+
+        private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (ThemeComboBox?.SelectedItem is ComboBoxItem cbi)
+            {
+                var theme = cbi.Content?.ToString();
+                ApplyTheme(string.Equals(theme, "Dark", StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
         public MainWindow()
         {
             InitializeComponent();
+
+            KeyDown += Window_KeyDown;
+
             Loaded += (_, __) =>
             {
                 ZoomSlider.ValueChanged += ZoomSlider_ValueChanged;
                 StatusTextBlock.Text = "Ready";
+
+                if (ShortcutsPanel != null)
+                    ShortcutsPanel.Visibility = _showShortcuts ? Visibility.Visible : Visibility.Collapsed;
+
+                // Apply initial theme based on UI (defaults to Dark).
+                if (ThemeComboBox?.SelectedItem is ComboBoxItem cbi)
+                    ApplyTheme(string.Equals(cbi.Content?.ToString(), "Dark", StringComparison.OrdinalIgnoreCase));
 
                 // Restore engine folder (optional)
                 var stored = TryLoadEngineFolderPath();
@@ -820,10 +1122,16 @@ namespace FluxionJsSceneEditor
 
                 if (el is TextElement te)
                 {
+                    var (_, _, _, _, scale) = GetSceneViewport();
+                    var baseFontSize = te.FontSize > 0 ? te.FontSize : 16;
+                    var renderFontSize = baseFontSize / (_viewCamZoom * scale);
+                    if (!double.IsFinite(renderFontSize) || renderFontSize <= 0)
+                        renderFontSize = baseFontSize;
+
                     var tb = new TextBlock
                     {
                         Text = te.Text ?? string.Empty,
-                        FontSize = te.FontSize > 0 ? te.FontSize : 16,
+                        FontSize = renderFontSize,
                         Foreground = ParseColorBrush(te.Color),
                         SnapsToDevicePixels = true
                     };
@@ -873,14 +1181,29 @@ namespace FluxionJsSceneEditor
                     }
                     else
                     {
-                        visual = new System.Windows.Shapes.Rectangle
+                        if (el is ClickableElement)
                         {
-                            Width = sizePx.Width,
-                            Height = sizePx.Height,
-                            Fill = System.Windows.Media.Brushes.DimGray,
-                            Stroke = System.Windows.Media.Brushes.White,
-                            StrokeThickness = 1
-                        };
+                            visual = new System.Windows.Shapes.Rectangle
+                            {
+                                Width = sizePx.Width,
+                                Height = sizePx.Height,
+                                Fill = System.Windows.Media.Brushes.Transparent,
+                                Stroke = System.Windows.Media.Brushes.DeepSkyBlue,
+                                StrokeThickness = 2,
+                                Opacity = 0.9
+                            };
+                        }
+                        else
+                        {
+                            visual = new System.Windows.Shapes.Rectangle
+                            {
+                                Width = sizePx.Width,
+                                Height = sizePx.Height,
+                                Fill = System.Windows.Media.Brushes.DimGray,
+                                Stroke = System.Windows.Media.Brushes.White,
+                                StrokeThickness = 1
+                            };
+                        }
                     }
                 }
 
@@ -1121,7 +1444,7 @@ namespace FluxionJsSceneEditor
         {
             _viewCamZoom = e.NewValue;
             _zoom = e.NewValue;
-            CameraZoomTextBox.Text = _viewCamZoom.ToString(CultureInfo.InvariantCulture);
+            // Do not overwrite the scene camera zoom field; camera zoom should be set explicitly by the user.
             RefreshCanvas();
         }
 
@@ -1305,10 +1628,7 @@ namespace FluxionJsSceneEditor
 
         private void ExportButton_Click(object sender, RoutedEventArgs e)
         {
-            _scene.Name = SceneNameTextBox.Text;
-            _scene.Camera.X = ParseDoubleSafe(CameraXTextBox.Text);
-            _scene.Camera.Y = ParseDoubleSafe(CameraYTextBox.Text);
-            _scene.Camera.Zoom = ParseDoubleSafe(CameraZoomTextBox.Text);
+            ApplySceneHeaderFromUi();
 
             var xml = SceneSerializer.Serialize(_scene);
             System.Windows.Clipboard.SetText(xml);
@@ -1325,6 +1645,7 @@ namespace FluxionJsSceneEditor
         private void AddAudioButton_Click(object sender, RoutedEventArgs e) => AddAudio();
         private void AddClickableButton_Click(object sender, RoutedEventArgs e) => AddClickable();
         private void HierarchyTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) => OnHierarchySelected();
+        private void StartEngineButton_Click(object sender, RoutedEventArgs e) => StartEngine();
 
         private void AddSprite()
         {
@@ -1444,19 +1765,6 @@ namespace FluxionJsSceneEditor
                 _projectFolderPath = dlg.SelectedPath;
                 StatusTextBlock.Text = $"Project folder: {_projectFolderPath}";
                 RefreshProjectTree();
-                try
-                {
-                    var psi = new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = _projectFolderPath,
-                        UseShellExecute = true
-                    };
-                    System.Diagnostics.Process.Start(psi);
-                }
-                catch (Exception ex)
-                {
-                    StatusTextBlock.Text = $"Failed to open folder: {ex.Message}";
-                }
             }
         }
 
@@ -1501,6 +1809,80 @@ namespace FluxionJsSceneEditor
                 return null;
 
             return System.IO.Path.GetFullPath(System.IO.Path.Combine(_engineFolderPath, relativePath));
+        }
+
+        private async void StartEngine()
+        {
+            if (_isStartingEngine)
+                return;
+
+            if (string.IsNullOrWhiteSpace(_engineFolderPath) || !Directory.Exists(_engineFolderPath))
+            {
+                System.Windows.MessageBox.Show(this, "Select a valid engine folder first.", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (_engineInfo == null)
+            {
+                System.Windows.MessageBox.Show(this, "Engine folder is not validated. Select it again.", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var versionDir = System.IO.Path.GetDirectoryName(_engineInfo.VersionFilePath);
+            var npmStartDir = string.IsNullOrWhiteSpace(versionDir) ? null : System.IO.Path.GetDirectoryName(versionDir);
+            if (string.IsNullOrWhiteSpace(npmStartDir) || !Directory.Exists(npmStartDir))
+            {
+                System.Windows.MessageBox.Show(this, "Cannot determine npm start directory (expected one level above version.py).", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            _isStartingEngine = true;
+            if (StartEngineButton != null)
+                StartEngineButton.IsEnabled = false;
+
+            try
+            {
+                StatusTextBlock.Text = "Running npm install...";
+                var sb = new System.Text.StringBuilder();
+
+                void Log(string line)
+                {
+                    sb.AppendLine(line);
+                }
+
+                var installExit = await RunProcessAsync("cmd.exe", "/c npm install", _engineFolderPath, Log);
+                if (installExit != 0)
+                {
+                    System.Windows.MessageBox.Show(this, sb.ToString(), $"npm install failed (exit {installExit})", MessageBoxButton.OK, MessageBoxImage.Error);
+                    StatusTextBlock.Text = "npm install failed";
+                    return;
+                }
+
+                StatusTextBlock.Text = "Starting engine (npm start)...";
+
+                // Start npm start in a visible terminal window so the user can see logs; don't block the editor.
+                var startPsi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = "/k npm start",
+                    WorkingDirectory = npmStartDir,
+                    UseShellExecute = true
+                };
+
+                System.Diagnostics.Process.Start(startPsi);
+                StatusTextBlock.Text = "Engine started";
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show(this, ex.Message, "Start Engine Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                StatusTextBlock.Text = "Failed to start engine";
+            }
+            finally
+            {
+                _isStartingEngine = false;
+                if (StartEngineButton != null)
+                    StartEngineButton.IsEnabled = true;
+            }
         }
     }
 

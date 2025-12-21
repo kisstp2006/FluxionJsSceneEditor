@@ -5,12 +5,14 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FluxionJsSceneEditor"
         mc:Ignorable="d"
-        Title="Fluxion Scene Editor" Height="700" Width="1200">
+        Title="Fluxion Scene Editor" Height="700" Width="1200"
+        Background="{DynamicResource App.BackgroundBrush}"
+        Foreground="{DynamicResource App.TextBrush}">
     <Window.Resources>
         <Style x:Key="PropLabelStyle" TargetType="TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="0,0,8,0" />
-            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="Foreground" Value="{DynamicResource App.SubtleTextBrush}" />
             <Setter Property="FontSize" Value="12" />
         </Style>
 
@@ -68,17 +70,27 @@
 
                 <Button x:Name="OpenEngineFolderButton" Content="Engine Folder" Click="OpenEngineFolderButton_Click" />
                 <Button x:Name="EngineInfoButton" Content="Engine Info" Click="EngineInfoButton_Click" />
-                <TextBlock Margin="6,0" VerticalAlignment="Center" Foreground="#DDDDDD" Text="Engine:" />
-                <TextBlock x:Name="EngineFolderPathTextBlock" Width="220" VerticalAlignment="Center" Foreground="#BBBBBB" TextTrimming="CharacterEllipsis" Text="(none)" />
+                <Button x:Name="StartEngineButton" Content="Start Engine" Click="StartEngineButton_Click" />
+                <Separator />
+                <TextBlock Margin="6,0" VerticalAlignment="Center" Foreground="{DynamicResource App.SubtleTextBrush}" Text="Theme:" />
+                <ComboBox x:Name="ThemeComboBox" Width="90" SelectedIndex="0" SelectionChanged="ThemeComboBox_SelectionChanged">
+                    <ComboBoxItem Content="Dark" />
+                    <ComboBoxItem Content="Light" />
+                </ComboBox>
+                <Separator />
+                <TextBlock Margin="6,0" VerticalAlignment="Center" Foreground="{DynamicResource App.SubtleTextBrush}" Text="Engine:" />
+                <TextBlock x:Name="EngineFolderPathTextBlock" Width="220" VerticalAlignment="Center" Foreground="{DynamicResource App.MutedTextBrush}" TextTrimming="CharacterEllipsis" Text="(none)" />
             </ToolBar>
         </ToolBarTray>
 
         <!-- Main editor area -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*" />
-                <ColumnDefinition Width="5*" />
-                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="260" MinWidth="200" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" MinWidth="400" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="340" MinWidth="240" />
             </Grid.ColumnDefinitions>
 
             <!-- Left sidebar: project + hierarchy -->
@@ -94,6 +106,18 @@
                     </DockPanel>
                 </GroupBox>
 
+                <GroupBox x:Name="ShortcutsPanel" Header="Shortcuts" DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <StackPanel Margin="6">
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+N  - New Scene" />
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+O  - Open Scene" />
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+S  - Save Scene" />
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+C  - Copy Selected" />
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+V  - Paste" />
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Del    - Delete Selected" />
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+/  - Toggle this panel" />
+                    </StackPanel>
+                </GroupBox>
+
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,8">
                     <Button Content="Add Sprite" Margin="0,0,8,0" Click="AddSpriteButton_Click" />
                     <Button Content="Add Audio" Margin="0,0,8,0" Click="AddAudioButton_Click" />
@@ -102,8 +126,10 @@
                 <TreeView x:Name="HierarchyTreeView" SelectedItemChanged="HierarchyTreeView_SelectedItemChanged" />
             </DockPanel>
 
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="{DynamicResource App.GridSplitterBrush}" />
+
             <!-- Visual editor -->
-            <Grid Grid.Column="1" Margin="8">
+            <Grid Grid.Column="2" Margin="8">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
@@ -131,16 +157,16 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- Corner -->
-                        <Border Grid.Row="0" Grid.Column="0" Background="#2a2a2a" BorderBrush="#444" BorderThickness="0,0,1,1" />
+                        <Border Grid.Row="0" Grid.Column="0" Background="{DynamicResource App.PanelAltBrush}" BorderBrush="{DynamicResource App.BorderBrush}" BorderThickness="0,0,1,1" />
 
                         <!-- Top ruler -->
-                        <Canvas x:Name="RulerTopCanvas" Grid.Row="0" Grid.Column="1" Height="24" Background="#2a2a2a" />
+                        <Canvas x:Name="RulerTopCanvas" Grid.Row="0" Grid.Column="1" Height="24" Background="{DynamicResource App.PanelAltBrush}" />
 
                         <!-- Left ruler -->
-                        <Canvas x:Name="RulerLeftCanvas" Grid.Row="1" Grid.Column="0" Width="24" Background="#2a2a2a" />
+                        <Canvas x:Name="RulerLeftCanvas" Grid.Row="1" Grid.Column="0" Width="24" Background="{DynamicResource App.PanelAltBrush}" />
 
                         <!-- Scene area (layered canvases) -->
-                        <Grid Grid.Row="1" Grid.Column="1" ClipToBounds="True" Background="#333">
+                        <Grid Grid.Row="1" Grid.Column="1" ClipToBounds="True" Background="{DynamicResource App.SurfaceBrush}">
                             <Canvas x:Name="GridCanvas" Background="Transparent" IsHitTestVisible="False" />
                             <Canvas x:Name="ContentCanvas" Background="Transparent" IsHitTestVisible="False" />
                             <Canvas x:Name="GizmoCanvas"
@@ -156,10 +182,12 @@
                 </ScrollViewer>
             </Grid>
 
+            <GridSplitter Grid.Column="3" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="{DynamicResource App.GridSplitterBrush}" />
+
             <!-- Properties panel -->
-            <Border Grid.Column="2" Margin="8" Background="#2B2B2B" BorderBrush="#444" BorderThickness="1" CornerRadius="4">
+            <Border Grid.Column="4" Margin="8" Background="{DynamicResource App.PanelBrush}" BorderBrush="{DynamicResource App.BorderBrush}" BorderThickness="1" CornerRadius="4">
                 <DockPanel LastChildFill="True">
-                    <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" Foreground="#FFFFFF" Margin="10,8,10,6" Text="Properties" />
+                    <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" Foreground="{DynamicResource App.TextBrush}" Margin="10,8,10,6" Text="Properties" />
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="10,0,10,10">
                         <StackPanel>
                             <GroupBox x:Name="ElementPropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Element">
