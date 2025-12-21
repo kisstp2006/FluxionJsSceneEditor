@@ -1,0 +1,156 @@
+﻿<Window x:Class="FluxionJsSceneEditor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FluxionJsSceneEditor"
+        mc:Ignorable="d"
+        Title="Fluxion Scene Editor" Height="700" Width="1200">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Top toolbar -->
+        <ToolBarTray Grid.Row="0">
+            <ToolBar>
+                <TextBlock Margin="8,0" VerticalAlignment="Center">Scene Name:</TextBlock>
+                <TextBox x:Name="SceneNameTextBox" Width="200" />
+                <Separator />
+                <TextBlock Margin="8,0" VerticalAlignment="Center">Camera X:</TextBlock>
+                <TextBox x:Name="CameraXTextBox" Width="80" />
+                <TextBlock Margin="8,0" VerticalAlignment="Center">Y:</TextBlock>
+                <TextBox x:Name="CameraYTextBox" Width="80" />
+                <TextBlock Margin="8,0" VerticalAlignment="Center">Zoom:</TextBlock>
+                <TextBox x:Name="CameraZoomTextBox" Width="80" />
+                <Separator />
+                <Button x:Name="NewSceneButton" Content="New Scene" Click="NewSceneButton_Click" />
+                <Button x:Name="ExportButton" Content="Export Scene" Click="ExportButton_Click" />
+                <Separator />
+                <Button x:Name="OpenProjectFolderButton" Content="Open Project Folder" Click="OpenProjectFolderButton_Click" />
+            </ToolBar>
+        </ToolBarTray>
+
+        <!-- Main editor area -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="5*" />
+                <ColumnDefinition Width="3*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left sidebar: project + hierarchy -->
+            <DockPanel Grid.Column="0" Margin="8">
+                <!-- Project tree -->
+                <GroupBox Header="Project" DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <DockPanel Margin="6">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                            <Button Content="Refresh" Click="RefreshProjectButton_Click" Margin="0,0,8,0" />
+                            <TextBlock Text="Folder:" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock x:Name="ProjectFolderPathTextBlock" VerticalAlignment="Center" Text="(none)" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <TreeView x:Name="ProjectTreeView" MouseDoubleClick="ProjectTreeView_MouseDoubleClick" KeyDown="ProjectTreeView_KeyDown" />
+                    </DockPanel>
+                </GroupBox>
+
+                <!-- Hierarchy -->
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <Button Content="Add Sprite" Margin="0,0,8,0" Click="AddSpriteButton_Click" />
+                    <Button Content="Add Audio" Margin="0,0,8,0" Click="AddAudioButton_Click" />
+                    <Button Content="Add Clickable" Click="AddClickableButton_Click" />
+                </StackPanel>
+                <TreeView x:Name="HierarchyTreeView" SelectedItemChanged="HierarchyTreeView_SelectedItemChanged">
+                    <!-- Items bound in code-behind -->
+                </TreeView>
+            </DockPanel>
+
+            <!-- Visual editor -->
+            <Grid Grid.Column="1" Margin="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock VerticalAlignment="Center" Margin="0,0,8,0">Zoom</TextBlock>
+                    <Slider x:Name="ZoomSlider" Minimum="0.25" Maximum="3" Value="1" Width="200" ValueChanged="ZoomSlider_ValueChanged" />
+                    <Button Content="Center Camera" Margin="8,0,0,0" Click="CenterCameraButton_Click" />
+                </StackPanel>
+                <ScrollViewer Grid.Row="1" Background="#222">
+                    <Canvas x:Name="EditorCanvas"
+                            Width="1200" Height="800"
+                            Background="#333"
+                            Focusable="True"
+                            MouseWheel="EditorCanvas_MouseWheel"
+                            MouseDown="EditorCanvas_MouseDown"
+                            MouseUp="EditorCanvas_MouseUp"
+                            KeyDown="EditorCanvas_KeyDown"
+                            MouseLeftButtonDown="EditorCanvas_MouseDown"
+                            MouseMove="EditorCanvas_MouseMove"
+                            MouseLeftButtonUp="EditorCanvas_MouseUp">
+                        <!-- Elements rendered from code-behind -->
+                    </Canvas>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- Properties panel -->
+            <StackPanel Grid.Column="2" Margin="8">
+                <TextBlock FontWeight="Bold" Text="Selected Element Properties" />
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock VerticalAlignment="Center" Width="100">Name</TextBlock>
+                    <TextBox x:Name="PropNameTextBox" Width="200" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock VerticalAlignment="Center" Width="100">Type</TextBlock>
+                    <TextBlock x:Name="PropTypeTextBlock" VerticalAlignment="Center" />
+                </StackPanel>
+                <!-- Common position/size -->
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock VerticalAlignment="Center" Width="100">X</TextBlock>
+                    <TextBox x:Name="PropXTextBox" Width="100" />
+                    <TextBlock VerticalAlignment="Center" Width="60">Y</TextBlock>
+                    <TextBox x:Name="PropYTextBox" Width="100" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock VerticalAlignment="Center" Width="100">Width</TextBlock>
+                    <TextBox x:Name="PropWidthTextBox" Width="100" />
+                    <TextBlock VerticalAlignment="Center" Width="60">Height</TextBlock>
+                    <TextBox x:Name="PropHeightTextBox" Width="100" />
+                </StackPanel>
+                <!-- Sprite specific -->
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock VerticalAlignment="Center" Width="100">Image Src</TextBlock>
+                    <TextBox x:Name="PropImageSrcTextBox" Width="300" />
+                </StackPanel>
+                <!-- Audio specific -->
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock VerticalAlignment="Center" Width="100">Audio Src</TextBlock>
+                    <TextBox x:Name="PropAudioSrcTextBox" Width="300" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock VerticalAlignment="Center" Width="100">Loop</TextBlock>
+                    <CheckBox x:Name="PropAudioLoopCheckBox" />
+                    <TextBlock VerticalAlignment="Center" Width="100">Autoplay</TextBlock>
+                    <CheckBox x:Name="PropAudioAutoplayCheckBox" />
+                </StackPanel>
+                <!-- Clickable specific -->
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock VerticalAlignment="Center" Width="150">Has Clickable Area</TextBlock>
+                    <CheckBox x:Name="PropHasClickableCheckBox" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                    <Button Content="Apply Changes" Click="ApplyChangesButton_Click" Margin="0,0,8,0" />
+                    <Button Content="Remove Element" Click="RemoveElementButton_Click" />
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+
+        <!-- Status bar -->
+        <StatusBar Grid.Row="2">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusTextBlock" Text="Ready" />
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>
