@@ -15,9 +15,12 @@ namespace FluxionJsSceneEditor
 
     public sealed class CameraModel
     {
+        public string Name { get; set; } = "MainCamera";
         public double X { get; set; }
         public double Y { get; set; }
         public double Zoom { get; set; } = 1;
+        public double Width { get; set; } = 1920;
+        public double Height { get; set; } = 1080;
     }
 
     public abstract class BaseElement
@@ -59,13 +62,30 @@ namespace FluxionJsSceneEditor
         public bool HasClickableArea { get; set; }
     }
 
+    public sealed class TextElement : BaseElement
+    {
+        public override string ElementType => "Text";
+
+        public string? Text { get; set; }
+        public double FontSize { get; set; } = 16;
+        public string? FontFamily { get; set; }
+        public string? Color { get; set; }
+
+        public TextElement()
+        {
+            // Text nodes don't use width/height in the new engine XML.
+            Width = 0;
+            Height = 0;
+        }
+    }
+
     public static class SceneSerializer
     {
         public static string Serialize(SceneModel scene)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"<Scene Name=\"{Escape(scene.Name)}\">");
-            sb.AppendLine($"  <Camera X=\"{scene.Camera.X}\" Y=\"{scene.Camera.Y}\" Zoom=\"{scene.Camera.Zoom}\" />");
+            sb.AppendLine($"  <Camera Name=\"{Escape(scene.Camera.Name)}\" X=\"{scene.Camera.X}\" Y=\"{scene.Camera.Y}\" Zoom=\"{scene.Camera.Zoom}\" Width=\"{scene.Camera.Width}\" Height=\"{scene.Camera.Height}\" />");
             sb.AppendLine("  <Elements>");
 
             foreach (var el in scene.Elements)
@@ -80,6 +100,9 @@ namespace FluxionJsSceneEditor
                         break;
                     case ClickableElement ce:
                         sb.AppendLine($"    <Clickable Name=\"{Escape(ce.Name)}\" X=\"{ce.X}\" Y=\"{ce.Y}\" Width=\"{ce.Width}\" Height=\"{ce.Height}\" HasClickableArea=\"{ce.HasClickableArea}\" />");
+                        break;
+                    case TextElement te:
+                        sb.AppendLine($"    <Text Name=\"{Escape(te.Name)}\" Text=\"{Escape(te.Text ?? string.Empty)}\" X=\"{te.X}\" Y=\"{te.Y}\" FontSize=\"{te.FontSize}\" FontFamily=\"{Escape(te.FontFamily ?? string.Empty)}\" Color=\"{Escape(te.Color ?? string.Empty)}\" />");
                         break;
                     default:
                         sb.AppendLine($"    <Element Type=\"{Escape(el.ElementType)}\" Name=\"{Escape(el.Name)}\" />");
@@ -109,19 +132,28 @@ namespace FluxionJsSceneEditor
             var cameraNode = sceneNode.SelectSingleNode("Camera") ?? sceneNode.SelectSingleNode("./Camera");
             if (cameraNode != null)
             {
+                scene.Camera.Name = GetAttrAnyCase(cameraNode, "name", "Name") ?? scene.Camera.Name;
                 scene.Camera.X = ParseDouble(GetAttrAnyCase(cameraNode, "x", "X"));
                 scene.Camera.Y = ParseDouble(GetAttrAnyCase(cameraNode, "y", "Y"));
+
                 var zoomAttr = GetAttrAnyCase(cameraNode, "zoom", "Zoom");
                 scene.Camera.Zoom = string.IsNullOrWhiteSpace(zoomAttr) ? 1 : ParseDouble(zoomAttr);
+
+                var wAttr = GetAttrAnyCase(cameraNode, "width", "Width");
+                var hAttr = GetAttrAnyCase(cameraNode, "height", "Height");
+                if (!string.IsNullOrWhiteSpace(wAttr))
+                    scene.Camera.Width = ParseDouble(wAttr);
+                if (!string.IsNullOrWhiteSpace(hAttr))
+                    scene.Camera.Height = ParseDouble(hAttr);
             }
 
             // Engine format: elements are direct children of <Scene>
             // Older editor format: elements are under <Elements>
-            var elementNodes = sceneNode.SelectNodes("./Sprite|./Audio|./Clickable|./Element")
+            var elementNodes = sceneNode.SelectNodes("./Sprite|./Audio|./Clickable|./Text|./Element")
                            ?? sceneNode.SelectNodes("./Elements/*");
 
             // If both exist, prefer direct children (engine format)
-            if (sceneNode.SelectNodes("./Sprite|./Audio|./Clickable|./Element") is XmlNodeList direct && direct.Count > 0)
+            if (sceneNode.SelectNodes("./Sprite|./Audio|./Clickable|./Text|./Element") is XmlNodeList direct && direct.Count > 0)
                 elementNodes = direct;
 
             if (elementNodes != null)
@@ -189,6 +221,21 @@ namespace FluxionJsSceneEditor
                             Width = ParseDoubleOrDefault(GetAttrAnyCase(n, "width", "Width"), 0.2),
                             Height = ParseDoubleOrDefault(GetAttrAnyCase(n, "height", "Height"), 0.2),
                             HasClickableArea = ParseBool(GetAttrAnyCase(n, "hasClickableArea", "HasClickableArea"))
+                        });
+                        continue;
+                    }
+
+                    if (localName == "Text")
+                    {
+                        scene.Elements.Add(new TextElement
+                        {
+                            Name = name,
+                            X = ParseDouble(GetAttrAnyCase(n, "x", "X")),
+                            Y = ParseDouble(GetAttrAnyCase(n, "y", "Y")),
+                            FontSize = ParseDoubleOrDefault(GetAttrAnyCase(n, "fontSize", "FontSize"), 16),
+                            FontFamily = GetAttrAnyCase(n, "fontFamily", "FontFamily"),
+                            Color = GetAttrAnyCase(n, "color", "Color"),
+                            Text = GetAttrAnyCase(n, "text", "Text") ?? n.InnerText?.Trim()
                         });
                         continue;
                     }

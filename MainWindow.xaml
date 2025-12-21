@@ -19,6 +19,13 @@
                 <TextBlock Margin="8,0" VerticalAlignment="Center">Scene Name:</TextBlock>
                 <TextBox x:Name="SceneNameTextBox" Width="200" />
                 <Separator />
+
+                <TextBlock Margin="8,0" VerticalAlignment="Center">Target W:</TextBlock>
+                <TextBox x:Name="TargetWidthTextBox" Width="70" Text="1920" />
+                <TextBlock Margin="8,0" VerticalAlignment="Center">H:</TextBlock>
+                <TextBox x:Name="TargetHeightTextBox" Width="70" Text="1080" />
+                <Separator />
+
                 <TextBlock Margin="8,0" VerticalAlignment="Center">Camera X:</TextBlock>
                 <TextBox x:Name="CameraXTextBox" Width="80" />
                 <TextBlock Margin="8,0" VerticalAlignment="Center">Y:</TextBlock>
@@ -26,6 +33,7 @@
                 <TextBlock Margin="8,0" VerticalAlignment="Center">Zoom:</TextBlock>
                 <TextBox x:Name="CameraZoomTextBox" Width="80" />
                 <Separator />
+
                 <Button x:Name="NewSceneButton" Content="New Scene" Click="NewSceneButton_Click" />
                 <Button x:Name="ExportButton" Content="Export Scene" Click="ExportButton_Click" />
                 <Separator />
@@ -43,7 +51,6 @@
 
             <!-- Left sidebar: project + hierarchy -->
             <DockPanel Grid.Column="0" Margin="8">
-                <!-- Project tree -->
                 <GroupBox Header="Project" DockPanel.Dock="Top" Margin="0,0,0,8">
                     <DockPanel Margin="6">
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
@@ -55,15 +62,12 @@
                     </DockPanel>
                 </GroupBox>
 
-                <!-- Hierarchy -->
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,8">
                     <Button Content="Add Sprite" Margin="0,0,8,0" Click="AddSpriteButton_Click" />
                     <Button Content="Add Audio" Margin="0,0,8,0" Click="AddAudioButton_Click" />
                     <Button Content="Add Clickable" Click="AddClickableButton_Click" />
                 </StackPanel>
-                <TreeView x:Name="HierarchyTreeView" SelectedItemChanged="HierarchyTreeView_SelectedItemChanged">
-                    <!-- Items bound in code-behind -->
-                </TreeView>
+                <TreeView x:Name="HierarchyTreeView" SelectedItemChanged="HierarchyTreeView_SelectedItemChanged" />
             </DockPanel>
 
             <!-- Visual editor -->
@@ -72,25 +76,51 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
+
                 <StackPanel Orientation="Horizontal">
                     <TextBlock VerticalAlignment="Center" Margin="0,0,8,0">Zoom</TextBlock>
                     <Slider x:Name="ZoomSlider" Minimum="0.25" Maximum="3" Value="1" Width="200" ValueChanged="ZoomSlider_ValueChanged" />
                     <Button Content="Center Camera" Margin="8,0,0,0" Click="CenterCameraButton_Click" />
+                    <Separator Margin="8,0" />
+                    <CheckBox x:Name="ShowGridCheckBox" Content="Grid" IsChecked="True" VerticalAlignment="Center" Checked="ShowGridCheckBox_Changed" Unchecked="ShowGridCheckBox_Changed" />
+                    <TextBlock VerticalAlignment="Center" Margin="8,0,4,0">Grid(px)</TextBlock>
+                    <TextBox x:Name="GridSpacingTextBox" Width="60" Text="64" LostFocus="GridSpacingTextBox_LostFocus" />
                 </StackPanel>
+
                 <ScrollViewer Grid.Row="1" Background="#222">
-                    <Canvas x:Name="EditorCanvas"
-                            Width="1200" Height="800"
-                            Background="#333"
-                            Focusable="True"
-                            MouseWheel="EditorCanvas_MouseWheel"
-                            MouseDown="EditorCanvas_MouseDown"
-                            MouseUp="EditorCanvas_MouseUp"
-                            KeyDown="EditorCanvas_KeyDown"
-                            MouseLeftButtonDown="EditorCanvas_MouseDown"
-                            MouseMove="EditorCanvas_MouseMove"
-                            MouseLeftButtonUp="EditorCanvas_MouseUp">
-                        <!-- Elements rendered from code-behind -->
-                    </Canvas>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="24" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="24" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Corner -->
+                        <Border Grid.Row="0" Grid.Column="0" Background="#2a2a2a" BorderBrush="#444" BorderThickness="0,0,1,1" />
+
+                        <!-- Top ruler -->
+                        <Canvas x:Name="RulerTopCanvas" Grid.Row="0" Grid.Column="1" Height="24" Background="#2a2a2a" />
+
+                        <!-- Left ruler -->
+                        <Canvas x:Name="RulerLeftCanvas" Grid.Row="1" Grid.Column="0" Width="24" Background="#2a2a2a" />
+
+                        <!-- Scene area (layered canvases) -->
+                        <Grid Grid.Row="1" Grid.Column="1" ClipToBounds="True" Background="#333">
+                            <Canvas x:Name="GridCanvas" Background="Transparent" IsHitTestVisible="False" />
+                            <Canvas x:Name="ContentCanvas" Background="Transparent" IsHitTestVisible="False" />
+                            <Canvas x:Name="GizmoCanvas"
+                                    Background="Transparent"
+                                    Focusable="True"
+                                    MouseWheel="EditorCanvas_MouseWheel"
+                                    MouseDown="EditorCanvas_MouseDown"
+                                    MouseUp="EditorCanvas_MouseUp"
+                                    MouseMove="EditorCanvas_MouseMove"
+                                    KeyDown="EditorCanvas_KeyDown" />
+                        </Grid>
+                    </Grid>
                 </ScrollViewer>
             </Grid>
 
@@ -105,7 +135,6 @@
                     <TextBlock VerticalAlignment="Center" Width="100">Type</TextBlock>
                     <TextBlock x:Name="PropTypeTextBlock" VerticalAlignment="Center" />
                 </StackPanel>
-                <!-- Common position/size -->
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                     <TextBlock VerticalAlignment="Center" Width="100">X</TextBlock>
                     <TextBox x:Name="PropXTextBox" Width="100" />
@@ -118,12 +147,10 @@
                     <TextBlock VerticalAlignment="Center" Width="60">Height</TextBlock>
                     <TextBox x:Name="PropHeightTextBox" Width="100" />
                 </StackPanel>
-                <!-- Sprite specific -->
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                     <TextBlock VerticalAlignment="Center" Width="100">Image Src</TextBlock>
                     <TextBox x:Name="PropImageSrcTextBox" Width="300" />
                 </StackPanel>
-                <!-- Audio specific -->
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                     <TextBlock VerticalAlignment="Center" Width="100">Audio Src</TextBlock>
                     <TextBox x:Name="PropAudioSrcTextBox" Width="300" />
@@ -134,11 +161,27 @@
                     <TextBlock VerticalAlignment="Center" Width="100">Autoplay</TextBlock>
                     <CheckBox x:Name="PropAudioAutoplayCheckBox" />
                 </StackPanel>
-                <!-- Clickable specific -->
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                     <TextBlock VerticalAlignment="Center" Width="150">Has Clickable Area</TextBlock>
                     <CheckBox x:Name="PropHasClickableCheckBox" />
                 </StackPanel>
+
+                <!-- Text specific -->
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock VerticalAlignment="Center" Width="100">Text</TextBlock>
+                    <TextBox x:Name="PropTextContentTextBox" Width="300" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock VerticalAlignment="Center" Width="100">Font Size</TextBlock>
+                    <TextBox x:Name="PropFontSizeTextBox" Width="100" />
+                    <TextBlock VerticalAlignment="Center" Width="80">Color</TextBlock>
+                    <TextBox x:Name="PropTextColorTextBox" Width="120" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock VerticalAlignment="Center" Width="100">Font</TextBlock>
+                    <TextBox x:Name="PropFontFamilyTextBox" Width="200" />
+                </StackPanel>
+
                 <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                     <Button Content="Apply Changes" Click="ApplyChangesButton_Click" Margin="0,0,8,0" />
                     <Button Content="Remove Element" Click="RemoveElementButton_Click" />
