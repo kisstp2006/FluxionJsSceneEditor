@@ -6,6 +6,31 @@
         xmlns:local="clr-namespace:FluxionJsSceneEditor"
         mc:Ignorable="d"
         Title="Fluxion Scene Editor" Height="700" Width="1200">
+    <Window.Resources>
+        <Style x:Key="PropLabelStyle" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Foreground" Value="#DDDDDD" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style x:Key="PropTextBoxStyle" TargetType="TextBox">
+            <Setter Property="MinWidth" Value="80" />
+            <Setter Property="Margin" Value="0,2,0,2" />
+            <Setter Property="Padding" Value="6,3" />
+        </Style>
+
+        <Style x:Key="PropCheckBoxStyle" TargetType="CheckBox">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,2,0,2" />
+        </Style>
+
+        <Style x:Key="PropGroupBoxStyle" TargetType="GroupBox">
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Padding" Value="8" />
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -37,7 +62,14 @@
                 <Button x:Name="NewSceneButton" Content="New Scene" Click="NewSceneButton_Click" />
                 <Button x:Name="ExportButton" Content="Export Scene" Click="ExportButton_Click" />
                 <Separator />
+
                 <Button x:Name="OpenProjectFolderButton" Content="Open Project Folder" Click="OpenProjectFolderButton_Click" />
+                <Separator />
+
+                <Button x:Name="OpenEngineFolderButton" Content="Engine Folder" Click="OpenEngineFolderButton_Click" />
+                <Button x:Name="EngineInfoButton" Content="Engine Info" Click="EngineInfoButton_Click" />
+                <TextBlock Margin="6,0" VerticalAlignment="Center" Foreground="#DDDDDD" Text="Engine:" />
+                <TextBlock x:Name="EngineFolderPathTextBlock" Width="220" VerticalAlignment="Center" Foreground="#BBBBBB" TextTrimming="CharacterEllipsis" Text="(none)" />
             </ToolBar>
         </ToolBarTray>
 
@@ -125,68 +157,129 @@
             </Grid>
 
             <!-- Properties panel -->
-            <StackPanel Grid.Column="2" Margin="8">
-                <TextBlock FontWeight="Bold" Text="Selected Element Properties" />
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock VerticalAlignment="Center" Width="100">Name</TextBlock>
-                    <TextBox x:Name="PropNameTextBox" Width="200" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <TextBlock VerticalAlignment="Center" Width="100">Type</TextBlock>
-                    <TextBlock x:Name="PropTypeTextBlock" VerticalAlignment="Center" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock VerticalAlignment="Center" Width="100">X</TextBlock>
-                    <TextBox x:Name="PropXTextBox" Width="100" />
-                    <TextBlock VerticalAlignment="Center" Width="60">Y</TextBlock>
-                    <TextBox x:Name="PropYTextBox" Width="100" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <TextBlock VerticalAlignment="Center" Width="100">Width</TextBlock>
-                    <TextBox x:Name="PropWidthTextBox" Width="100" />
-                    <TextBlock VerticalAlignment="Center" Width="60">Height</TextBlock>
-                    <TextBox x:Name="PropHeightTextBox" Width="100" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock VerticalAlignment="Center" Width="100">Image Src</TextBlock>
-                    <TextBox x:Name="PropImageSrcTextBox" Width="300" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock VerticalAlignment="Center" Width="100">Audio Src</TextBlock>
-                    <TextBox x:Name="PropAudioSrcTextBox" Width="300" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <TextBlock VerticalAlignment="Center" Width="100">Loop</TextBlock>
-                    <CheckBox x:Name="PropAudioLoopCheckBox" />
-                    <TextBlock VerticalAlignment="Center" Width="100">Autoplay</TextBlock>
-                    <CheckBox x:Name="PropAudioAutoplayCheckBox" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock VerticalAlignment="Center" Width="150">Has Clickable Area</TextBlock>
-                    <CheckBox x:Name="PropHasClickableCheckBox" />
-                </StackPanel>
+            <Border Grid.Column="2" Margin="8" Background="#2B2B2B" BorderBrush="#444" BorderThickness="1" CornerRadius="4">
+                <DockPanel LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" Foreground="#FFFFFF" Margin="10,8,10,6" Text="Properties" />
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="10,0,10,10">
+                        <StackPanel>
+                            <GroupBox x:Name="ElementPropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Element">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
 
-                <!-- Text specific -->
-                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock VerticalAlignment="Center" Width="100">Text</TextBlock>
-                    <TextBox x:Name="PropTextContentTextBox" Width="300" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <TextBlock VerticalAlignment="Center" Width="100">Font Size</TextBlock>
-                    <TextBox x:Name="PropFontSizeTextBox" Width="100" />
-                    <TextBlock VerticalAlignment="Center" Width="80">Color</TextBlock>
-                    <TextBox x:Name="PropTextColorTextBox" Width="120" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                    <TextBlock VerticalAlignment="Center" Width="100">Font</TextBlock>
-                    <TextBox x:Name="PropFontFamilyTextBox" Width="200" />
-                </StackPanel>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Name" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="PropNameTextBox" Style="{StaticResource PropTextBoxStyle}" />
 
-                <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                    <Button Content="Apply Changes" Click="ApplyChangesButton_Click" Margin="0,0,8,0" />
-                    <Button Content="Remove Element" Click="RemoveElementButton_Click" />
-                </StackPanel>
-            </StackPanel>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Type" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="PropTypeTextBlock" VerticalAlignment="Center" Foreground="#FFFFFF" />
+                                </Grid>
+                            </GroupBox>
+
+                            <GroupBox x:Name="TransformPropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Transform">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="60" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="X" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="PropXTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Style="{StaticResource PropLabelStyle}" Text="Y" />
+                                    <TextBox Grid.Row="0" Grid.Column="3" x:Name="PropYTextBox" Style="{StaticResource PropTextBoxStyle}" />
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Width" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="PropWidthTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource PropLabelStyle}" Text="Height" />
+                                    <TextBox Grid.Row="1" Grid.Column="3" x:Name="PropHeightTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                </Grid>
+                            </GroupBox>
+
+                            <GroupBox x:Name="SpritePropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Sprite">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Image Src" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="PropImageSrcTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                </Grid>
+                            </GroupBox>
+
+                            <GroupBox x:Name="TextPropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Text">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="70" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Content" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" x:Name="PropTextContentTextBox" Style="{StaticResource PropTextBoxStyle}" />
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Font" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="PropFontFamilyTextBox" Style="{StaticResource PropTextBoxStyle}" />
+
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource PropLabelStyle}" Text="Size" />
+                                    <TextBox Grid.Row="1" Grid.Column="3" x:Name="PropFontSizeTextBox" Style="{StaticResource PropTextBoxStyle}" />
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Color" />
+                                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="PropTextColorTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                </Grid>
+                            </GroupBox>
+
+                            <GroupBox x:Name="AudioPropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Audio">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Audio Src" />
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="PropAudioSrcTextBox" Style="{StaticResource PropTextBoxStyle}" />
+
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,4,0,0">
+                                        <CheckBox x:Name="PropAudioLoopCheckBox" Style="{StaticResource PropCheckBoxStyle}" Content="Loop" Margin="0,0,14,0" />
+                                        <CheckBox x:Name="PropAudioAutoplayCheckBox" Style="{StaticResource PropCheckBoxStyle}" Content="Autoplay" />
+                                    </StackPanel>
+                                </Grid>
+                            </GroupBox>
+
+                            <GroupBox x:Name="ClickablePropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Clickable">
+                                <StackPanel>
+                                    <CheckBox x:Name="PropHasClickableCheckBox" Style="{StaticResource PropCheckBoxStyle}" Content="Has clickable area" />
+                                </StackPanel>
+                            </GroupBox>
+
+                            <StackPanel x:Name="PropsButtonsPanel" Orientation="Horizontal" Margin="0,6,0,0">
+                                <Button Content="Apply Changes" Click="ApplyChangesButton_Click" Margin="0,0,8,0" />
+                                <Button Content="Remove Element" Click="RemoveElementButton_Click" />
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
         </Grid>
 
         <!-- Status bar -->

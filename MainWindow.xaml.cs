@@ -25,6 +25,155 @@ namespace FluxionJsSceneEditor
         private bool _isPanning;
         private System.Windows.Point _panStartCanvasPoint;
 
+        private string? _engineFolderPath;
+        private EngineInfo? _engineInfo;
+
+        private sealed record EngineInfo(string EngineName, string Version, string Codename, string License, string VersionFilePath);
+
+        private const string ExpectedEngineName = "Fluxion Web Engine";
+        private const string ExpectedVersion = "1.0.0";
+        private const string ExpectedCodename = "Fluxion-Js";
+        private const string ExpectedLicense = "MIT/Apache-2.0";
+
+        private static readonly string EngineFolderPathConfigFile = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "FluxionJsSceneEditor",
+            "engineFolderPath.txt");
+
+        private static string? TryLoadEngineFolderPath()
+        {
+            try
+            {
+                if (!File.Exists(EngineFolderPathConfigFile))
+                    return null;
+
+                var text = File.ReadAllText(EngineFolderPathConfigFile).Trim();
+                return string.IsNullOrWhiteSpace(text) ? null : text;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void TrySaveEngineFolderPath(string? path)
+        {
+            try
+            {
+                var dir = System.IO.Path.GetDirectoryName(EngineFolderPathConfigFile);
+                if (!string.IsNullOrWhiteSpace(dir))
+                    Directory.CreateDirectory(dir);
+
+                File.WriteAllText(EngineFolderPathConfigFile, path ?? string.Empty);
+            }
+            catch
+            {
+            }
+        }
+
+        private static bool TryParsePyStringAssignment(string line, string expectedKey, out string value)
+        {
+            value = string.Empty;
+            if (string.IsNullOrWhiteSpace(line))
+                return false;
+
+            var trimmed = line.Trim();
+            if (!trimmed.StartsWith(expectedKey + " ", StringComparison.Ordinal) &&
+                !trimmed.StartsWith(expectedKey + "=", StringComparison.Ordinal))
+                return false;
+
+            var eq = trimmed.IndexOf('=');
+            if (eq < 0)
+                return false;
+
+            var rhs = trimmed[(eq + 1)..].Trim();
+            if (rhs.Length < 2)
+                return false;
+
+            var quote = rhs[0];
+            if (quote != '"' && quote != '\'')
+                return false;
+
+            var end = rhs.IndexOf(quote, 1);
+            if (end < 0)
+                return false;
+
+            value = rhs.Substring(1, end - 1);
+            return true;
+        }
+
+        private static EngineInfo ValidateAndLoadEngineInfo(string engineFolderPath)
+        {
+            if (string.IsNullOrWhiteSpace(engineFolderPath) || !Directory.Exists(engineFolderPath))
+                throw new InvalidOperationException("Engine folder does not exist.");
+
+            var versionFile = System.IO.Path.Combine(engineFolderPath, "version.py");
+            if (!File.Exists(versionFile))
+                throw new InvalidOperationException("Engine folder is invalid: missing version.py.");
+
+            var lines = File.ReadAllLines(versionFile);
+
+            string? engineName = null;
+            string? version = null;
+            string? codename = null;
+            string? license = null;
+
+            foreach (var line in lines)
+            {
+                if (engineName == null && TryParsePyStringAssignment(line, "ENGINE_NAME", out var v1))
+                    engineName = v1;
+                else if (version == null && TryParsePyStringAssignment(line, "VERSION", out var v2))
+                    version = v2;
+                else if (codename == null && TryParsePyStringAssignment(line, "CODENAME", out var v3))
+                    codename = v3;
+                else if (license == null && TryParsePyStringAssignment(line, "LICENSE", out var v4))
+                    license = v4;
+            }
+
+            if (!string.Equals(engineName, ExpectedEngineName, StringComparison.Ordinal) ||
+                !string.Equals(version, ExpectedVersion, StringComparison.Ordinal) ||
+                !string.Equals(codename, ExpectedCodename, StringComparison.Ordinal) ||
+                !string.Equals(license, ExpectedLicense, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Engine folder is invalid: version.py does not match expected Fluxion engine metadata.");
+            }
+
+            return new EngineInfo(engineName!, version!, codename!, license!, versionFile);
+        }
+
+        private void ApplyEngineSelection(string? engineFolderPath)
+        {
+            if (string.IsNullOrWhiteSpace(engineFolderPath))
+                throw new InvalidOperationException("No engine folder selected.");
+
+            var info = ValidateAndLoadEngineInfo(engineFolderPath);
+
+            _engineFolderPath = engineFolderPath;
+            _engineInfo = info;
+
+            TrySaveEngineFolderPath(_engineFolderPath);
+            EngineFolderPathTextBlock.Text = _engineFolderPath;
+        }
+
+        private void ShowEngineInfo()
+        {
+            if (_engineInfo == null)
+            {
+                System.Windows.MessageBox.Show(this, "No engine selected.", "Engine Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var msg =
+                $"ENGINE_NAME = \"{_engineInfo.EngineName}\"\n" +
+                $"VERSION = \"{_engineInfo.Version}\"\n" +
+                $"CODENAME = \"{_engineInfo.Codename}\"\n" +
+                $"LICENSE = \"{_engineInfo.License}\"\n\n" +
+                $"File: {_engineInfo.VersionFilePath}";
+
+            System.Windows.MessageBox.Show(this, msg, "Engine Info", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
         private const double DefaultTargetWidth = 1920;
         private const double DefaultTargetHeight = 1080;
 
@@ -50,6 +199,27 @@ namespace FluxionJsSceneEditor
             {
                 ZoomSlider.ValueChanged += ZoomSlider_ValueChanged;
                 StatusTextBlock.Text = "Ready";
+
+                // Restore engine folder (optional)
+                var stored = TryLoadEngineFolderPath();
+                if (!string.IsNullOrWhiteSpace(stored))
+                {
+                    try
+                    {
+                        ApplyEngineSelection(stored);
+                    }
+                    catch
+                    {
+                        _engineFolderPath = null;
+                        _engineInfo = null;
+                        EngineFolderPathTextBlock.Text = "(none)";
+                    }
+                }
+                else
+                {
+                    EngineFolderPathTextBlock.Text = "(none)";
+                }
+
                 NewScene(); // now ActualWidth/ActualHeight are valid
             };
         }
@@ -1009,9 +1179,33 @@ namespace FluxionJsSceneEditor
             return imageSrc;
         }
 
+        private void SetPropertiesPanelVisibility(BaseElement? el)
+        {
+            if (ElementPropsGroup == null) return;
+
+            var hasSelection = el != null;
+
+            ElementPropsGroup.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
+            TransformPropsGroup.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
+            PropsButtonsPanel.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
+
+            SpritePropsGroup.Visibility = el is SpriteElement ? Visibility.Visible : Visibility.Collapsed;
+            TextPropsGroup.Visibility = el is TextElement ? Visibility.Visible : Visibility.Collapsed;
+            AudioPropsGroup.Visibility = el is AudioElement ? Visibility.Visible : Visibility.Collapsed;
+            ClickablePropsGroup.Visibility = el is ClickableElement ? Visibility.Visible : Visibility.Collapsed;
+
+            // Text and Audio don't use transform in this editor (Text sizes itself, Audio is non-visual)
+            /*
+            if (el is TextElement || el is AudioElement)
+                TransformPropsGroup.Visibility = Visibility.Collapsed;
+            */
+        }
+
         private void SelectElement(BaseElement el)
         {
             _selected = el;
+            SetPropertiesPanelVisibility(el);
+
             PropNameTextBox.Text = el.Name;
             PropTypeTextBlock.Text = el.ElementType;
             PropXTextBox.Text = el.X.ToString(CultureInfo.InvariantCulture);
@@ -1103,6 +1297,7 @@ namespace FluxionJsSceneEditor
             if (_selected == null) return;
             _scene.Elements.Remove(_selected);
             _selected = null;
+            SetPropertiesPanelVisibility(null);
             RefreshHierarchy();
             RefreshCanvas();
             StatusTextBlock.Text = "Element removed";
@@ -1175,6 +1370,7 @@ namespace FluxionJsSceneEditor
 
             _scene = loaded;
             _selected = null;
+            SetPropertiesPanelVisibility(null);
 
             // Initialize editor view from scene camera
             _viewCamX = _scene.Camera.X;
@@ -1262,6 +1458,49 @@ namespace FluxionJsSceneEditor
                     StatusTextBlock.Text = $"Failed to open folder: {ex.Message}";
                 }
             }
+        }
+
+        private void OpenEngineFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new System.Windows.Forms.FolderBrowserDialog
+            {
+                Description = "Select Fluxion engine folder (where the engine is installed)",
+                UseDescriptionForTitle = true,
+                ShowNewFolderButton = false
+            };
+
+            System.Windows.Forms.Application.EnableVisualStyles();
+
+            var result = dlg.ShowDialog();
+            if (result == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(dlg.SelectedPath))
+            {
+                try
+                {
+                    ApplyEngineSelection(dlg.SelectedPath);
+                    StatusTextBlock.Text = $"Engine folder: {_engineFolderPath}";
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show(this, ex.Message, "Invalid Engine Folder", MessageBoxButton.OK, MessageBoxImage.Error);
+                    StatusTextBlock.Text = "Invalid engine folder";
+                }
+            }
+        }
+
+        private void EngineInfoButton_Click(object sender, RoutedEventArgs e)
+        {
+            ShowEngineInfo();
+        }
+
+        private string? ResolveEnginePath(string relativePath)
+        {
+            if (string.IsNullOrWhiteSpace(relativePath))
+                return relativePath;
+
+            if (string.IsNullOrWhiteSpace(_engineFolderPath))
+                return null;
+
+            return System.IO.Path.GetFullPath(System.IO.Path.Combine(_engineFolderPath, relativePath));
         }
     }
 
