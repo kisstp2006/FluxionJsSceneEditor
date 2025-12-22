@@ -5,170 +5,321 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FluxionJsSceneEditor"
         mc:Ignorable="d"
-        Title="Fluxion Scene Editor" Height="700" Width="1200"
+        Title="Fluxion Scene Editor"
+        Height="700"
+        Width="1200"
         Background="{DynamicResource App.BackgroundBrush}"
         Foreground="{DynamicResource App.TextBrush}">
     <Window.Resources>
-        <Style x:Key="PropLabelStyle" TargetType="TextBlock">
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0,0,8,0" />
-            <Setter Property="Foreground" Value="{DynamicResource App.SubtleTextBrush}" />
-            <Setter Property="FontSize" Value="12" />
+        <Style x:Key="PropLabelStyle"
+                TargetType="TextBlock">
+            <Setter Property="VerticalAlignment"
+                    Value="Center"/>
+            <Setter Property="Margin"
+                    Value="0,0,8,0"/>
+            <Setter Property="Foreground"
+                    Value="{DynamicResource App.SubtleTextBrush}"/>
+            <Setter Property="FontSize"
+                    Value="12"/>
         </Style>
 
-        <Style x:Key="PropTextBoxStyle" TargetType="TextBox">
-            <Setter Property="MinWidth" Value="80" />
-            <Setter Property="Margin" Value="0,2,0,2" />
-            <Setter Property="Padding" Value="6,3" />
+        <Style x:Key="PropTextBoxStyle"
+                TargetType="TextBox">
+            <Setter Property="MinWidth"
+                    Value="80"/>
+            <Setter Property="Margin"
+                    Value="0,2,0,2"/>
+            <Setter Property="Padding"
+                    Value="6,3"/>
         </Style>
 
-        <Style x:Key="PropCheckBoxStyle" TargetType="CheckBox">
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Margin" Value="0,2,0,2" />
+        <Style x:Key="PropCheckBoxStyle"
+                TargetType="CheckBox">
+            <Setter Property="VerticalAlignment"
+                    Value="Center"/>
+            <Setter Property="Margin"
+                    Value="0,2,0,2"/>
         </Style>
 
-        <Style x:Key="PropGroupBoxStyle" TargetType="GroupBox">
-            <Setter Property="Margin" Value="0,0,0,10" />
-            <Setter Property="Padding" Value="8" />
+        <Style x:Key="PropGroupBoxStyle"
+                TargetType="GroupBox">
+            <Setter Property="Margin"
+                    Value="0,0,0,10"/>
+            <Setter Property="Padding"
+                    Value="8"/>
         </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- Top toolbar -->
         <ToolBarTray Grid.Row="0">
             <ToolBar>
-                <TextBlock Margin="8,0" VerticalAlignment="Center">Scene Name:</TextBlock>
-                <TextBox x:Name="SceneNameTextBox" Width="200" />
-                <Separator />
+                <TextBlock Margin="8,0"
+                        VerticalAlignment="Center">Scene Name:</TextBlock>
+                <TextBox x:Name="SceneNameTextBox"
+                        Width="200"/>
+                <Separator/>
 
-                <TextBlock Margin="8,0" VerticalAlignment="Center">Target W:</TextBlock>
-                <TextBox x:Name="TargetWidthTextBox" Width="70" Text="1920" />
-                <TextBlock Margin="8,0" VerticalAlignment="Center">H:</TextBlock>
-                <TextBox x:Name="TargetHeightTextBox" Width="70" Text="1080" />
-                <Separator />
+                <TextBlock Margin="8,0"
+                        VerticalAlignment="Center">Target W:</TextBlock>
+                <TextBox x:Name="TargetWidthTextBox"
+                        Width="70"
+                        Text="1920"/>
+                <TextBlock Margin="8,0"
+                        VerticalAlignment="Center">H:</TextBlock>
+                <TextBox x:Name="TargetHeightTextBox"
+                        Width="70"
+                        Text="1080"/>
+                <Separator/>
 
-                <TextBlock Margin="8,0" VerticalAlignment="Center">Camera X:</TextBlock>
-                <TextBox x:Name="CameraXTextBox" Width="80" />
-                <TextBlock Margin="8,0" VerticalAlignment="Center">Y:</TextBlock>
-                <TextBox x:Name="CameraYTextBox" Width="80" />
-                <TextBlock Margin="8,0" VerticalAlignment="Center">Zoom:</TextBlock>
-                <TextBox x:Name="CameraZoomTextBox" Width="80" />
-                <Separator />
+                <TextBlock Margin="8,0"
+                        VerticalAlignment="Center">Camera X:</TextBlock>
+                <TextBox x:Name="CameraXTextBox"
+                        Width="80"/>
+                <TextBlock Margin="8,0"
+                        VerticalAlignment="Center">Y:</TextBlock>
+                <TextBox x:Name="CameraYTextBox"
+                        Width="80"/>
+                <TextBlock Margin="8,0"
+                        VerticalAlignment="Center">Zoom:</TextBlock>
+                <TextBox x:Name="CameraZoomTextBox"
+                        Width="80"/>
+                <Separator/>
 
-                <Button x:Name="NewSceneButton" Content="New Scene" Click="NewSceneButton_Click" />
-                <Button x:Name="ExportButton" Content="Export Scene" Click="ExportButton_Click" />
-                <Separator />
+                <Button x:Name="NewSceneButton"
+                        Content="New Scene"
+                        Click="NewSceneButton_Click"/>
+                <Button x:Name="ExportButton"
+                        Content="Export Scene"
+                        Click="ExportButton_Click"/>
+                <Separator/>
 
-                <Button x:Name="OpenProjectFolderButton" Content="Open Project Folder" Click="OpenProjectFolderButton_Click" />
-                <Separator />
+                <Button x:Name="OpenProjectFolderButton"
+                        Content="Open Project Folder"
+                        Click="OpenProjectFolderButton_Click"/>
+                <Separator/>
 
-                <Button x:Name="OpenEngineFolderButton" Content="Engine Folder" Click="OpenEngineFolderButton_Click" />
-                <Button x:Name="EngineInfoButton" Content="Engine Info" Click="EngineInfoButton_Click" />
-                <Button x:Name="StartEngineButton" Content="Start Engine" Click="StartEngineButton_Click" />
-                <Separator />
-                <TextBlock Margin="6,0" VerticalAlignment="Center" Foreground="{DynamicResource App.SubtleTextBrush}" Text="Theme:" />
-                <ComboBox x:Name="ThemeComboBox" Width="90" SelectedIndex="0" SelectionChanged="ThemeComboBox_SelectionChanged">
-                    <ComboBoxItem Content="Dark" />
-                    <ComboBoxItem Content="Light" />
+                <Button x:Name="OpenEngineFolderButton"
+                        Content="Engine Folder"
+                        Click="OpenEngineFolderButton_Click"/>
+                <Button x:Name="EngineInfoButton"
+                        Content="Engine Info"
+                        Click="EngineInfoButton_Click"/>
+                <Button x:Name="StartEngineButton"
+                        Content="Start Engine"
+                        Click="StartEngineButton_Click"/>
+                <Separator/>
+                <TextBlock Margin="6,0"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource App.SubtleTextBrush}"
+                        Text="Theme:"/>
+                <ComboBox x:Name="ThemeComboBox"
+                        Width="90"
+                        SelectedIndex="0"
+                        SelectionChanged="ThemeComboBox_SelectionChanged">
+                    <ComboBoxItem Content="Dark"/>
+                    <ComboBoxItem Content="Light"/>
                 </ComboBox>
-                <Separator />
-                <TextBlock Margin="6,0" VerticalAlignment="Center" Foreground="{DynamicResource App.SubtleTextBrush}" Text="Engine:" />
-                <TextBlock x:Name="EngineFolderPathTextBlock" Width="220" VerticalAlignment="Center" Foreground="{DynamicResource App.MutedTextBrush}" TextTrimming="CharacterEllipsis" Text="(none)" />
+                <Separator/>
+                <TextBlock Margin="6,0"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource App.SubtleTextBrush}"
+                        Text="Engine:"/>
+                <TextBlock x:Name="EngineFolderPathTextBlock"
+                        Width="220"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource App.MutedTextBrush}"
+                        TextTrimming="CharacterEllipsis"
+                        Text="(none)"/>
             </ToolBar>
         </ToolBarTray>
 
         <!-- Main editor area -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="260" MinWidth="200" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" MinWidth="400" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="340" MinWidth="240" />
+                <ColumnDefinition Width="260"
+                        MinWidth="200"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"
+                        MinWidth="400"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="340"
+                        MinWidth="240"/>
             </Grid.ColumnDefinitions>
 
             <!-- Left sidebar: project + hierarchy -->
-            <DockPanel Grid.Column="0" Margin="8">
-                <GroupBox Header="Project" DockPanel.Dock="Top" Margin="0,0,0,8">
+            <DockPanel Grid.Column="0"
+                    Margin="8">
+                <GroupBox Header="Project"
+                        DockPanel.Dock="Top"
+                        Margin="0,0,0,8">
                     <DockPanel Margin="6">
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="Refresh" Click="RefreshProjectButton_Click" Margin="0,0,8,0" />
-                            <TextBlock Text="Folder:" VerticalAlignment="Center" Margin="0,0,6,0" />
-                            <TextBlock x:Name="ProjectFolderPathTextBlock" VerticalAlignment="Center" Text="(none)" TextWrapping="Wrap" />
+                        <StackPanel DockPanel.Dock="Top"
+                                Orientation="Horizontal"
+                                Margin="0,0,0,6">
+                            <Button Content="Refresh"
+                                    Click="RefreshProjectButton_Click"
+                                    Margin="0,0,8,0"/>
+                            <TextBlock Text="Folder:"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,6,0"/>
+                            <TextBlock x:Name="ProjectFolderPathTextBlock"
+                                    VerticalAlignment="Center"
+                                    Text="(none)"
+                                    TextWrapping="Wrap"/>
                         </StackPanel>
-                        <TreeView x:Name="ProjectTreeView" MouseDoubleClick="ProjectTreeView_MouseDoubleClick" KeyDown="ProjectTreeView_KeyDown" />
+                        <TreeView x:Name="ProjectTreeView"
+                                MouseDoubleClick="ProjectTreeView_MouseDoubleClick"
+                                KeyDown="ProjectTreeView_KeyDown"/>
                     </DockPanel>
                 </GroupBox>
 
-                <GroupBox x:Name="ShortcutsPanel" Header="Shortcuts" DockPanel.Dock="Top" Margin="0,0,0,8">
+                <GroupBox x:Name="ShortcutsPanel"
+                        Header="Shortcuts"
+                        DockPanel.Dock="Top"
+                        Margin="0,0,0,8">
                     <StackPanel Margin="6">
-                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+N  - New Scene" />
-                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+O  - Open Scene" />
-                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+S  - Save Scene" />
-                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+C  - Copy Selected" />
-                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+V  - Paste" />
-                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Del    - Delete Selected" />
-                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}" Text="Ctrl+/  - Toggle this panel" />
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}"
+                                Text="Ctrl+N  - New Scene"/>
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}"
+                                Text="Ctrl+O  - Open Scene"/>
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}"
+                                Text="Ctrl+S  - Save Scene"/>
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}"
+                                Text="Ctrl+C  - Copy Selected"/>
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}"
+                                Text="Ctrl+V  - Paste"/>
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}"
+                                Text="Del    - Delete Selected"/>
+                        <TextBlock Foreground="{DynamicResource App.SubtleTextBrush}"
+                                Text="Ctrl+/  - Toggle this panel"/>
                     </StackPanel>
                 </GroupBox>
 
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,8">
-                    <Button Content="Add Sprite" Margin="0,0,8,0" Click="AddSpriteButton_Click" />
-                    <Button Content="Add Audio" Margin="0,0,8,0" Click="AddAudioButton_Click" />
-                    <Button Content="Add Clickable" Click="AddClickableButton_Click" />
+                <StackPanel Orientation="Horizontal"
+                        DockPanel.Dock="Top"
+                        Margin="0,0,0,8"
+                        HorizontalAlignment="Left">
+                    <Button x:Name="AddElementButton"
+                            Content="+"
+                            FontSize="16"
+                            FontWeight="Bold"
+                            Width="28"
+                            Height="28"
+                            Padding="0"
+                            Click="AddElementButton_Click"
+                            ToolTip="Add Element">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Sprite"
+                                        Click="AddSpriteMenuItem_Click"/>
+                                <MenuItem Header="Animated Sprite"
+                                        Click="AddAnimatedSpriteMenuItem_Click"/>
+                                <MenuItem Header="Text"
+                                        Click="AddTextMenuItem_Click"/>
+                                <MenuItem Header="Audio"
+                                        Click="AddAudioMenuItem_Click"/>
+                                <MenuItem Header="Clickable"
+                                        Click="AddClickableMenuItem_Click"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
                 </StackPanel>
-                <TreeView x:Name="HierarchyTreeView" SelectedItemChanged="HierarchyTreeView_SelectedItemChanged" />
+                <TreeView x:Name="HierarchyTreeView"
+                        SelectedItemChanged="HierarchyTreeView_SelectedItemChanged"/>
             </DockPanel>
 
-            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="{DynamicResource App.GridSplitterBrush}" />
+            <GridSplitter Grid.Column="1"
+                    Width="6"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Stretch"
+                    Background="{DynamicResource App.GridSplitterBrush}"/>
 
             <!-- Visual editor -->
-            <Grid Grid.Column="2" Margin="8">
+            <Grid Grid.Column="2"
+                    Margin="8">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock VerticalAlignment="Center" Margin="0,0,8,0">Zoom</TextBlock>
-                    <Slider x:Name="ZoomSlider" Minimum="0.25" Maximum="3" Value="1" Width="200" ValueChanged="ZoomSlider_ValueChanged" />
-                    <Button Content="Center Camera" Margin="8,0,0,0" Click="CenterCameraButton_Click" />
-                    <Separator Margin="8,0" />
-                    <CheckBox x:Name="ShowGridCheckBox" Content="Grid" IsChecked="True" VerticalAlignment="Center" Checked="ShowGridCheckBox_Changed" Unchecked="ShowGridCheckBox_Changed" />
-                    <TextBlock VerticalAlignment="Center" Margin="8,0,4,0">Grid(px)</TextBlock>
-                    <TextBox x:Name="GridSpacingTextBox" Width="60" Text="64" LostFocus="GridSpacingTextBox_LostFocus" />
+                    <TextBlock VerticalAlignment="Center"
+                            Margin="0,0,8,0">Zoom</TextBlock>
+                    <Slider x:Name="ZoomSlider"
+                            Minimum="0.25"
+                            Maximum="3"
+                            Value="1"
+                            Width="200"
+                            ValueChanged="ZoomSlider_ValueChanged"/>
+                    <Button Content="Center Camera"
+                            Margin="8,0,0,0"
+                            Click="CenterCameraButton_Click"/>
+                    <Separator Margin="8,0"/>
+                    <CheckBox x:Name="ShowGridCheckBox"
+                            Content="Grid"
+                            IsChecked="True"
+                            VerticalAlignment="Center"
+                            Checked="ShowGridCheckBox_Changed"
+                            Unchecked="ShowGridCheckBox_Changed"/>
+                    <TextBlock VerticalAlignment="Center"
+                            Margin="8,0,4,0">Grid(px)</TextBlock>
+                    <TextBox x:Name="GridSpacingTextBox"
+                            Width="60"
+                            Text="64"
+                            LostFocus="GridSpacingTextBox_LostFocus"/>
                 </StackPanel>
 
-                <ScrollViewer Grid.Row="1" Background="#222">
+                <ScrollViewer Grid.Row="1"
+                        Background="#222">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="24" />
-                            <RowDefinition Height="*" />
+                            <RowDefinition Height="24"/>
+                            <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="24" />
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="24"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- Corner -->
-                        <Border Grid.Row="0" Grid.Column="0" Background="{DynamicResource App.PanelAltBrush}" BorderBrush="{DynamicResource App.BorderBrush}" BorderThickness="0,0,1,1" />
+                        <Border Grid.Row="0"
+                                Grid.Column="0"
+                                Background="{DynamicResource App.PanelAltBrush}"
+                                BorderBrush="{DynamicResource App.BorderBrush}"
+                                BorderThickness="0,0,1,1"/>
 
                         <!-- Top ruler -->
-                        <Canvas x:Name="RulerTopCanvas" Grid.Row="0" Grid.Column="1" Height="24" Background="{DynamicResource App.PanelAltBrush}" />
+                        <Canvas x:Name="RulerTopCanvas"
+                                Grid.Row="0"
+                                Grid.Column="1"
+                                Height="24"
+                                Background="{DynamicResource App.PanelAltBrush}"/>
 
                         <!-- Left ruler -->
-                        <Canvas x:Name="RulerLeftCanvas" Grid.Row="1" Grid.Column="0" Width="24" Background="{DynamicResource App.PanelAltBrush}" />
+                        <Canvas x:Name="RulerLeftCanvas"
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                Width="24"
+                                Background="{DynamicResource App.PanelAltBrush}"/>
 
                         <!-- Scene area (layered canvases) -->
-                        <Grid Grid.Row="1" Grid.Column="1" ClipToBounds="True" Background="{DynamicResource App.SurfaceBrush}">
-                            <Canvas x:Name="GridCanvas" Background="Transparent" IsHitTestVisible="False" />
-                            <Canvas x:Name="ContentCanvas" Background="Transparent" IsHitTestVisible="False" />
+                        <Grid Grid.Row="1"
+                                Grid.Column="1"
+                                ClipToBounds="True"
+                                Background="{DynamicResource App.SurfaceBrush}">
+                            <Canvas x:Name="GridCanvas"
+                                    Background="Transparent"
+                                    IsHitTestVisible="False"/>
+                            <Canvas x:Name="ContentCanvas"
+                                    Background="Transparent"
+                                    IsHitTestVisible="False"/>
                             <Canvas x:Name="GizmoCanvas"
                                     Background="Transparent"
                                     Focusable="True"
@@ -176,133 +327,435 @@
                                     MouseDown="EditorCanvas_MouseDown"
                                     MouseUp="EditorCanvas_MouseUp"
                                     MouseMove="EditorCanvas_MouseMove"
-                                    KeyDown="EditorCanvas_KeyDown" />
+                                    KeyDown="EditorCanvas_KeyDown"/>
                         </Grid>
                     </Grid>
                 </ScrollViewer>
             </Grid>
 
-            <GridSplitter Grid.Column="3" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch" Background="{DynamicResource App.GridSplitterBrush}" />
+            <GridSplitter Grid.Column="3"
+                    Width="6"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Stretch"
+                    Background="{DynamicResource App.GridSplitterBrush}"/>
 
             <!-- Properties panel -->
-            <Border Grid.Column="4" Margin="8" Background="{DynamicResource App.PanelBrush}" BorderBrush="{DynamicResource App.BorderBrush}" BorderThickness="1" CornerRadius="4">
+            <Border Grid.Column="4"
+                    Margin="8"
+                    Background="{DynamicResource App.PanelBrush}"
+                    BorderBrush="{DynamicResource App.BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4">
                 <DockPanel LastChildFill="True">
-                    <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" Foreground="{DynamicResource App.TextBrush}" Margin="10,8,10,6" Text="Properties" />
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="10,0,10,10">
+                    <TextBlock DockPanel.Dock="Top"
+                            FontWeight="SemiBold"
+                            Foreground="{DynamicResource App.TextBrush}"
+                            Margin="10,8,10,6"
+                            Text="Properties"/>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                            HorizontalScrollBarVisibility="Disabled"
+                            Padding="10,0,10,10">
                         <StackPanel>
-                            <GroupBox x:Name="ElementPropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Element">
+                            <GroupBox x:Name="ElementPropsGroup"
+                                    Style="{StaticResource PropGroupBoxStyle}"
+                                    Header="Element">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="90" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Name" />
-                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="PropNameTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                    <TextBlock Grid.Row="0"
+                                            Grid.Column="0"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Name"/>
+                                    <TextBox Grid.Row="0"
+                                            Grid.Column="1"
+                                            x:Name="PropNameTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Type" />
-                                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="PropTypeTextBlock" VerticalAlignment="Center" Foreground="#FFFFFF" />
+                                    <TextBlock Grid.Row="1"
+                                            Grid.Column="0"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Type"/>
+                                    <TextBlock Grid.Row="1"
+                                            Grid.Column="1"
+                                            x:Name="PropTypeTextBlock"
+                                            VerticalAlignment="Center"
+                                            Foreground="{DynamicResource App.TextBrush}"/>
+
+                                    <TextBlock Grid.Row="2"
+                                            Grid.Column="0"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Active"/>
+                                    <CheckBox Grid.Row="2"
+                                            Grid.Column="1"
+                                            x:Name="PropActiveCheckBox"
+                                            Style="{StaticResource PropCheckBoxStyle}"
+                                            Content="Element is active"
+                                            Checked="PropCheckBox_Changed"
+                                            Unchecked="PropCheckBox_Changed"/>
                                 </Grid>
                             </GroupBox>
 
-                            <GroupBox x:Name="TransformPropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Transform">
+                            <GroupBox x:Name="TransformPropsGroup"
+                                    Style="{StaticResource PropGroupBoxStyle}"
+                                    Header="Transform">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="60" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="60" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="X" />
-                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="PropXTextBox" Style="{StaticResource PropTextBoxStyle}" />
-                                    <TextBlock Grid.Row="0" Grid.Column="2" Style="{StaticResource PropLabelStyle}" Text="Y" />
-                                    <TextBox Grid.Row="0" Grid.Column="3" x:Name="PropYTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                    <TextBlock Grid.Row="0"
+                                            Grid.Column="0"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="X"/>
+                                    <TextBox Grid.Row="0"
+                                            Grid.Column="1"
+                                            x:Name="PropXTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
+                                    <TextBlock Grid.Row="0"
+                                            Grid.Column="2"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Y"/>
+                                    <TextBox Grid.Row="0"
+                                            Grid.Column="3"
+                                            x:Name="PropYTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Width" />
-                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="PropWidthTextBox" Style="{StaticResource PropTextBoxStyle}" />
-                                    <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource PropLabelStyle}" Text="Height" />
-                                    <TextBox Grid.Row="1" Grid.Column="3" x:Name="PropHeightTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                    <TextBlock Grid.Row="1"
+                                            Grid.Column="0"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Width"/>
+                                    <TextBox Grid.Row="1"
+                                            Grid.Column="1"
+                                            x:Name="PropWidthTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
+                                    <TextBlock Grid.Row="1"
+                                            Grid.Column="2"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Height"/>
+                                    <TextBox Grid.Row="1"
+                                            Grid.Column="3"
+                                            x:Name="PropHeightTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
+
+                                    <TextBlock Grid.Row="2"
+                                            Grid.Column="0"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Layer"/>
+                                    <TextBox Grid.Row="2"
+                                            Grid.Column="1"
+                                            x:Name="PropLayerTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
                                 </Grid>
                             </GroupBox>
 
-                            <GroupBox x:Name="SpritePropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Sprite">
+                            <GroupBox x:Name="SpritePropsGroup"
+                                    Style="{StaticResource PropGroupBoxStyle}"
+                                    Header="Sprite">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="90" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Image Src" />
-                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="PropImageSrcTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                    <TextBlock Grid.Row="0"
+                                            Grid.Column="0"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Image Src"/>
+                                    <TextBox Grid.Row="0"
+                                            Grid.Column="1"
+                                            x:Name="PropImageSrcTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
                                 </Grid>
                             </GroupBox>
 
-                            <GroupBox x:Name="TextPropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Text">
+                            <GroupBox x:Name="AnimatedSpritePropsGroup"
+                                    Style="{StaticResource PropGroupBoxStyle}"
+                                    Header="Animated Sprite">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="90"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                Style="{StaticResource PropLabelStyle}"
+                                                Text="Spritesheet"/>
+                                        <TextBox Grid.Column="1"
+                                                x:Name="PropAnimImageSrcTextBox"
+                                                Style="{StaticResource PropTextBoxStyle}"
+                                                LostFocus="PropTextBox_LostFocus"/>
+                                    </Grid>
+                                    <Grid Margin="0,4,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="90"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                Style="{StaticResource PropLabelStyle}"
+                                                Text="Frame W/H"/>
+                                        <StackPanel Grid.Column="1"
+                                                Orientation="Horizontal">
+                                            <TextBox x:Name="PropFrameWidthTextBox"
+                                                    Style="{StaticResource PropTextBoxStyle}"
+                                                    Width="60"
+                                                    LostFocus="PropTextBox_LostFocus"/>
+                                            <TextBlock Text="x"
+                                                    VerticalAlignment="Center"
+                                                    Margin="4,0"
+                                                    Foreground="{DynamicResource App.TextBrush}"/>
+                                            <TextBox x:Name="PropFrameHeightTextBox"
+                                                    Style="{StaticResource PropTextBoxStyle}"
+                                                    Width="60"
+                                                    LostFocus="PropTextBox_LostFocus"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Animations List -->
+                                    <TextBlock Text="Animations"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Margin="0,8,0,4"/>
+                                    <ListBox x:Name="AnimationsListBox"
+                                            Height="80"
+                                            SelectionChanged="AnimationsListBox_SelectionChanged"/>
+                                    <StackPanel Orientation="Horizontal"
+                                            Margin="0,4,0,0">
+                                        <Button Content="+ Add"
+                                                Width="60"
+                                                Click="AddAnimationButton_Click"/>
+                                        <Button Content="- Remove"
+                                                Width="60"
+                                                Margin="4,0,0,0"
+                                                Click="RemoveAnimationButton_Click"/>
+                                    </StackPanel>
+
+                                    <!-- Selected Animation Properties -->
+                                    <GroupBox x:Name="SelectedAnimationPropsGroup"
+                                            Header="Animation Properties"
+                                            Margin="0,8,0,0"
+                                            Padding="4">
+                                        <StackPanel>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="70"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                        Style="{StaticResource PropLabelStyle}"
+                                                        Text="Name"/>
+                                                <TextBox Grid.Column="1"
+                                                        x:Name="PropAnimNameTextBox"
+                                                        Style="{StaticResource PropTextBoxStyle}"
+                                                        LostFocus="AnimationPropTextBox_LostFocus"/>
+                                            </Grid>
+                                            <TextBlock Text="Frames"
+                                                    Style="{StaticResource PropLabelStyle}"
+                                                    Margin="0,4,0,2"/>
+                                            <ListBox x:Name="FramesListBox"
+                                                    Height="80"
+                                                    SelectionChanged="FramesListBox_SelectionChanged"/>
+                                            <StackPanel Orientation="Horizontal"
+                                                    Margin="0,4,0,0">
+                                                <Button x:Name="AddFrameButton"
+                                                        Content="+ Add"
+                                                        Width="60"
+                                                        Click="AddFrameButton_Click"/>
+                                                <Button x:Name="RemoveFrameButton"
+                                                        Content="- Remove"
+                                                        Width="60"
+                                                        Margin="4,0,0,0"
+                                                        Click="RemoveFrameButton_Click"/>
+                                            </StackPanel>
+                                            <Grid x:Name="SelectedFrameEditorGrid"
+                                                    Margin="0,4,0,0"
+                                                    Visibility="Collapsed">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="70"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                        Style="{StaticResource PropLabelStyle}"
+                                                        Text="Value"/>
+                                                <TextBox Grid.Column="1"
+                                                        x:Name="PropFrameValueTextBox"
+                                                        Style="{StaticResource PropTextBoxStyle}"
+                                                        LostFocus="FrameValueTextBox_LostFocus"/>
+                                            </Grid>
+                                            <Grid Margin="0,4,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="70"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                        Style="{StaticResource PropLabelStyle}"
+                                                        Text="Speed"/>
+                                                <TextBox Grid.Column="1"
+                                                        x:Name="PropAnimSpeedTextBox"
+                                                        Style="{StaticResource PropTextBoxStyle}"
+                                                        Width="60"
+                                                        HorizontalAlignment="Left"
+                                                        ToolTip="Seconds per frame"
+                                                        LostFocus="AnimationPropTextBox_LostFocus"/>
+                                            </Grid>
+                                            <StackPanel Orientation="Horizontal"
+                                                    Margin="0,4,0,0">
+                                                <CheckBox x:Name="PropAnimLoopCheckBox"
+                                                        Style="{StaticResource PropCheckBoxStyle}"
+                                                        Content="Loop"
+                                                        Margin="0,0,14,0"
+                                                        Checked="AnimationPropCheckBox_Changed"
+                                                        Unchecked="AnimationPropCheckBox_Changed"/>
+                                                <CheckBox x:Name="PropAnimAutoplayCheckBox"
+                                                        Style="{StaticResource PropCheckBoxStyle}"
+                                                        Content="Autoplay"
+                                                        Checked="AnimationPropCheckBox_Changed"
+                                                        Unchecked="AnimationPropCheckBox_Changed"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </GroupBox>
+                                </StackPanel>
+                            </GroupBox>
+
+                            <GroupBox x:Name="TextPropsGroup"
+                                    Style="{StaticResource PropGroupBoxStyle}"
+                                    Header="Text">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="90" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="70" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Content" />
-                                    <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" x:Name="PropTextContentTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                    <TextBlock Grid.Row="0"
+                                            Grid.Column="0"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Content"/>
+                                    <TextBox Grid.Row="0"
+                                            Grid.Column="1"
+                                            Grid.ColumnSpan="3"
+                                            x:Name="PropTextContentTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Font" />
-                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="PropFontFamilyTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                    <TextBlock Grid.Row="1"
+                                            Grid.Column="0"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Font"/>
+                                    <TextBox Grid.Row="1"
+                                            Grid.Column="1"
+                                            x:Name="PropFontFamilyTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource PropLabelStyle}" Text="Size" />
-                                    <TextBox Grid.Row="1" Grid.Column="3" x:Name="PropFontSizeTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                    <TextBlock Grid.Row="1"
+                                            Grid.Column="2"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Size"/>
+                                    <TextBox Grid.Row="1"
+                                            Grid.Column="3"
+                                            x:Name="PropFontSizeTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Color" />
-                                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="PropTextColorTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                    <TextBlock Grid.Row="2"
+                                            Grid.Column="0"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Color"/>
+                                    <TextBox Grid.Row="2"
+                                            Grid.Column="1"
+                                            x:Name="PropTextColorTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
                                 </Grid>
                             </GroupBox>
 
-                            <GroupBox x:Name="AudioPropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Audio">
+                            <GroupBox x:Name="AudioPropsGroup"
+                                    Style="{StaticResource PropGroupBoxStyle}"
+                                    Header="Audio">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="90" />
-                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource PropLabelStyle}" Text="Audio Src" />
-                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="PropAudioSrcTextBox" Style="{StaticResource PropTextBoxStyle}" />
+                                    <TextBlock Grid.Row="0"
+                                            Grid.Column="0"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Audio Src"/>
+                                    <TextBox Grid.Row="0"
+                                            Grid.Column="1"
+                                            x:Name="PropAudioSrcTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            LostFocus="PropTextBox_LostFocus"/>
 
-                                    <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,4,0,0">
-                                        <CheckBox x:Name="PropAudioLoopCheckBox" Style="{StaticResource PropCheckBoxStyle}" Content="Loop" Margin="0,0,14,0" />
-                                        <CheckBox x:Name="PropAudioAutoplayCheckBox" Style="{StaticResource PropCheckBoxStyle}" Content="Autoplay" />
+                                    <StackPanel Grid.Row="1"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            Orientation="Horizontal"
+                                            Margin="0,4,0,0">
+                                        <CheckBox x:Name="PropAudioLoopCheckBox"
+                                                Style="{StaticResource PropCheckBoxStyle}"
+                                                Content="Loop"
+                                                Margin="0,0,14,0"
+                                                Checked="PropCheckBox_Changed"
+                                                Unchecked="PropCheckBox_Changed"/>
+                                        <CheckBox x:Name="PropAudioAutoplayCheckBox"
+                                                Style="{StaticResource PropCheckBoxStyle}"
+                                                Content="Autoplay"
+                                                Checked="PropCheckBox_Changed"
+                                                Unchecked="PropCheckBox_Changed"/>
                                     </StackPanel>
                                 </Grid>
                             </GroupBox>
 
-                            <GroupBox x:Name="ClickablePropsGroup" Style="{StaticResource PropGroupBoxStyle}" Header="Clickable">
+                            <GroupBox x:Name="ClickablePropsGroup"
+                                    Style="{StaticResource PropGroupBoxStyle}"
+                                    Header="Clickable">
                                 <StackPanel>
-                                    <CheckBox x:Name="PropHasClickableCheckBox" Style="{StaticResource PropCheckBoxStyle}" Content="Has clickable area" />
+                                    <CheckBox x:Name="PropHasClickableCheckBox"
+                                            Style="{StaticResource PropCheckBoxStyle}"
+                                            Content="Has clickable area"
+                                            Checked="PropCheckBox_Changed"
+                                            Unchecked="PropCheckBox_Changed"/>
                                 </StackPanel>
                             </GroupBox>
 
-                            <StackPanel x:Name="PropsButtonsPanel" Orientation="Horizontal" Margin="0,6,0,0">
-                                <Button Content="Apply Changes" Click="ApplyChangesButton_Click" Margin="0,0,8,0" />
-                                <Button Content="Remove Element" Click="RemoveElementButton_Click" />
+                            <StackPanel x:Name="PropsButtonsPanel"
+                                    Orientation="Horizontal"
+                                    Margin="0,6,0,0">
+                                <Button Content="Remove Element"
+                                        Click="RemoveElementButton_Click"/>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
@@ -313,7 +766,8 @@
         <!-- Status bar -->
         <StatusBar Grid.Row="2">
             <StatusBarItem>
-                <TextBlock x:Name="StatusTextBlock" Text="Ready" />
+                <TextBlock x:Name="StatusTextBlock"
+                        Text="Ready"/>
             </StatusBarItem>
         </StatusBar>
     </Grid>
