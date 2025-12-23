@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:FluxionJsSceneEditor"
+        xmlns:controls="clr-namespace:FluxionJsSceneEditor.Controls"
         mc:Ignorable="d"
         Title="Fluxion Scene Editor"
         Height="700"
@@ -47,6 +48,16 @@
                     Value="0,0,0,10"/>
             <Setter Property="Padding"
                     Value="8"/>
+        </Style>
+
+        <Style x:Key="ColorSwatchButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,2,6,2"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource App.BorderBrush}"/>
+            <Setter Property="Background" Value="Transparent"/>
         </Style>
     </Window.Resources>
 
@@ -510,7 +521,11 @@
                                             Grid.Column="1"
                                             x:Name="PropImageSrcTextBox"
                                             Style="{StaticResource PropTextBoxStyle}"
-                                            LostFocus="PropTextBox_LostFocus"/>
+                                            LostFocus="PropTextBox_LostFocus"
+                                            AllowDrop="True"
+                                            PreviewDragOver="PathTextBox_PreviewDragOver"
+                                            Drop="ImagePathTextBox_Drop"/>
+
                                 </Grid>
                             </GroupBox>
 
@@ -529,7 +544,10 @@
                                         <TextBox Grid.Column="1"
                                                 x:Name="PropAnimImageSrcTextBox"
                                                 Style="{StaticResource PropTextBoxStyle}"
-                                                LostFocus="PropTextBox_LostFocus"/>
+                                                LostFocus="PropTextBox_LostFocus"
+                                                AllowDrop="True"
+                                                PreviewDragOver="PathTextBox_PreviewDragOver"
+                                                Drop="ImagePathTextBox_Drop"/>
                                     </Grid>
                                     <Grid Margin="0,4,0,0">
                                         <Grid.ColumnDefinitions>
@@ -712,11 +730,34 @@
                                             Grid.Column="0"
                                             Style="{StaticResource PropLabelStyle}"
                                             Text="Color"/>
-                                    <TextBox Grid.Row="2"
-                                            Grid.Column="1"
-                                            x:Name="PropTextColorTextBox"
-                                            Style="{StaticResource PropTextBoxStyle}"
-                                            LostFocus="PropTextBox_LostFocus"/>
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal">
+                                        <Button x:Name="PropTextColorSwatchButton"
+                                                Style="{StaticResource ColorSwatchButtonStyle}"
+                                                Click="ColorSwatchButton_Click"
+                                                ToolTip="Pick color">
+                                            <Border CornerRadius="4" BorderThickness="1"
+                                                    BorderBrush="{DynamicResource App.BorderBrush}">
+                                                <Border.Background>
+                                                    <SolidColorBrush Color="White"/>
+                                                </Border.Background>
+                                            </Border>
+                                        </Button>
+
+                                        <TextBox x:Name="PropTextColorTextBox"
+                                                Style="{StaticResource PropTextBoxStyle}"
+                                                MinWidth="120"
+                                                VerticalAlignment="Center"
+                                                LostFocus="PropTextBox_LostFocus"
+                                                TextChanged="PropTextColorTextBox_TextChanged"/>
+
+                                        <Popup x:Name="ColorPickerPopup"
+                                               PlacementTarget="{Binding ElementName=PropTextColorTextBox}"
+                                               Placement="Bottom"
+                                               AllowsTransparency="True"
+                                               StaysOpen="False">
+                                            <controls:ColorPickerFlyout x:Name="ColorPickerFlyoutControl" />
+                                        </Popup>
+                                    </StackPanel>
                                 </Grid>
                             </GroupBox>
 
@@ -741,7 +782,10 @@
                                             Grid.Column="1"
                                             x:Name="PropAudioSrcTextBox"
                                             Style="{StaticResource PropTextBoxStyle}"
-                                            LostFocus="PropTextBox_LostFocus"/>
+                                            LostFocus="PropTextBox_LostFocus"
+                                            AllowDrop="True"
+                                            PreviewDragOver="PathTextBox_PreviewDragOver"
+                                            Drop="AudioPathTextBox_Drop"/>
 
                                     <StackPanel Grid.Row="1"
                                             Grid.Column="0"

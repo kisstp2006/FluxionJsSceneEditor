@@ -1820,6 +1820,23 @@ namespace FluxionJsSceneEditor
                 PropLayerTextBox.Text = el.Layer.ToString(CultureInfo.InvariantCulture);
                 PropOpacityTextBox.Text = el.Opacity.ToString(CultureInfo.InvariantCulture);
                 PropOpacitySlider.Value = el.Opacity;
+
+                if (el is TextElement te)
+                {
+                    PropTextContentTextBox.Text = te.Text ?? string.Empty;
+                    PropFontSizeTextBox.Text = te.FontSize.ToString(CultureInfo.InvariantCulture);
+                    PropFontFamilyTextBox.Text = te.FontFamily ?? string.Empty;
+                    PropTextColorTextBox.Text = te.Color ?? string.Empty;
+                    UpdateColorSwatchFromText(PropTextColorTextBox.Text);
+                }
+                else if (el is AnimatedSpriteElement ase)
+                {
+                    RefreshAnimationsList(ase);
+                }
+                else
+                {
+                    ClearSelectedAnimationProps();
+                }
             }
             finally
             {
@@ -2125,28 +2142,51 @@ namespace FluxionJsSceneEditor
             ApplyPropertiesFromPanel();
         }
 
-        // ---- XAML event handler forwarders ----
-        private void NewSceneButton_Click(object sender, RoutedEventArgs e) => NewScene();
+        // ---- Color picker handlers ----
 
-        private void StartEngineButton_Click(object sender, RoutedEventArgs e) => StartEngine();
-
-        private void AddElementButton_Click(object sender, RoutedEventArgs e)
+        private void UpdateColorSwatchFromText(string? text)
         {
-            if (AddElementButton.ContextMenu != null)
-            {
-                AddElementButton.ContextMenu.PlacementTarget = AddElementButton;
-                AddElementButton.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-                AddElementButton.ContextMenu.IsOpen = true;
-            }
+            if (PropTextColorSwatchButton?.Content is not Border b)
+                return;
+
+            var brush = ParseColorBrush(text);
+            b.Background = brush;
         }
 
-        private void AddSpriteMenuItem_Click(object sender, RoutedEventArgs e) => AddSprite();
-        private void AddAnimatedSpriteMenuItem_Click(object sender, RoutedEventArgs e) => AddAnimatedSprite();
-        private void AddTextMenuItem_Click(object sender, RoutedEventArgs e) => AddText();
-        private void AddAudioMenuItem_Click(object sender, RoutedEventArgs e) => AddAudio();
-        private void AddClickableMenuItem_Click(object sender, RoutedEventArgs e) => AddClickable();
+        private void EnsureColorPickerWired()
+        {
+            if (ColorPickerFlyoutControl == null)
+                return;
 
-        private void HierarchyTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) => OnHierarchySelected();
+            ColorPickerFlyoutControl.ColorCommitted -= ColorPickerFlyoutControl_ColorCommitted;
+            ColorPickerFlyoutControl.ColorCommitted += ColorPickerFlyoutControl_ColorCommitted;
+        }
+
+        private void ColorPickerFlyoutControl_ColorCommitted(object? sender, string hex)
+        {
+            if (PropTextColorTextBox == null)
+                return;
+
+            PropTextColorTextBox.Text = hex;
+            UpdateColorSwatchFromText(hex);
+        }
+
+        private void ColorSwatchButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (ColorPickerPopup == null || PropTextColorTextBox == null)
+                return;
+
+            EnsureColorPickerWired();
+            ColorPickerFlyoutControl?.SetColorString(PropTextColorTextBox.Text);
+            ColorPickerPopup.IsOpen = true;
+            e.Handled = true;
+        }
+
+        private void PropTextColorTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_isUpdatingPropertiesPanel) return;
+            UpdateColorSwatchFromText(PropTextColorTextBox.Text);
+        }
 
         // ---- Animation panel handlers (used by AnimatedSpritePropsGroup) ----
         private AnimationModel? _selectedAnimation;
@@ -2180,8 +2220,8 @@ namespace FluxionJsSceneEditor
             var newAnim = new AnimationModel
             {
                 Name = "Animation" + (ase.Animations.Count + 1),
-                Frames = new List<string> { "0", "1", "2", "3" },
-                Speed = 0.1,
+                Frames = new List<string> { "0" },
+                Speed = 10,
                 Loop = true,
                 Autoplay = ase.Animations.Count == 0
             };
@@ -2197,10 +2237,15 @@ namespace FluxionJsSceneEditor
             if (_selected is not AnimatedSpriteElement ase) return;
             if (_selectedAnimation == null) return;
 
-            var name = _selectedAnimation.Name;
+            var removedName = _selectedAnimation.Name;
+            var removedIndex = ase.Animations.IndexOf(_selectedAnimation);
             ase.Animations.Remove(_selectedAnimation);
+
             RefreshAnimationsList(ase);
-            StatusTextBlock.Text = $"Animation '{name}' removed";
+            if (ase.Animations.Count > 0)
+                AnimationsListBox.SelectedIndex = Math.Clamp(removedIndex, 0, ase.Animations.Count - 1);
+
+            StatusTextBlock.Text = $"Animation '{removedName}' removed";
         }
 
         private void AddFrameButton_Click(object sender, RoutedEventArgs e)
@@ -2209,6 +2254,7 @@ namespace FluxionJsSceneEditor
 
             _selectedAnimation.Frames.Add("path/to/frame.png");
             RefreshFramesList();
+            FramesListBox.SelectedIndex = _selectedAnimation.Frames.Count - 1;
         }
 
         private void RemoveFrameButton_Click(object sender, RoutedEventArgs e)
@@ -2217,10 +2263,16 @@ namespace FluxionJsSceneEditor
             if (FramesListBox.SelectedItem is not ListBoxItem item) return;
 
             var index = (int)item.Tag;
-            if (index >= 0 && index < _selectedAnimation.Frames.Count)
-                _selectedAnimation.Frames.RemoveAt(index);
+            if (index < 0 || index >= _selectedAnimation.Frames.Count)
+                return;
 
+            _selectedAnimation.Frames.RemoveAt(index);
             RefreshFramesList();
+
+            if (_selectedAnimation.Frames.Count > 0)
+                FramesListBox.SelectedIndex = Math.Clamp(index, 0, _selectedAnimation.Frames.Count - 1);
+            else
+                PropFrameValueTextBox.Text = string.Empty;
         }
 
         private void FramesListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -2267,10 +2319,13 @@ namespace FluxionJsSceneEditor
             if (_selected is not AnimatedSpriteElement ase) return;
 
             var oldName = _selectedAnimation.Name;
-            _selectedAnimation.Name = PropAnimNameTextBox.Text;
+            _selectedAnimation.Name = PropAnimNameTextBox.Text.Trim();
             _selectedAnimation.Speed = ParseDoubleSafe(PropAnimSpeedTextBox.Text);
             _selectedAnimation.Loop = PropAnimLoopCheckBox.IsChecked == true;
             _selectedAnimation.Autoplay = PropAnimAutoplayCheckBox.IsChecked == true;
+
+            if (string.IsNullOrWhiteSpace(_selectedAnimation.Name))
+                _selectedAnimation.Name = oldName;
 
             if (!string.Equals(oldName, _selectedAnimation.Name, StringComparison.Ordinal))
             {
@@ -2317,6 +2372,7 @@ namespace FluxionJsSceneEditor
             _selectedAnimation = null;
             PropAnimNameTextBox.Text = string.Empty;
             FramesListBox.Items.Clear();
+            PropFrameValueTextBox.Text = string.Empty;
             PropAnimSpeedTextBox.Text = string.Empty;
             PropAnimLoopCheckBox.IsChecked = false;
             PropAnimAutoplayCheckBox.IsChecked = false;
@@ -2324,28 +2380,29 @@ namespace FluxionJsSceneEditor
             SelectedFrameEditorGrid.Visibility = Visibility.Collapsed;
         }
 
-        // Methods expected elsewhere in the editor
-        private void StartEngine()
+        // ---- XAML event handler forwarders ----
+        private void NewSceneButton_Click(object sender, RoutedEventArgs e) => NewScene();
+        private void StartEngineButton_Click(object sender, RoutedEventArgs e) => StartEngine();
+
+        private void AddElementButton_Click(object sender, RoutedEventArgs e)
         {
-            // Minimal implementation: guard against missing config.
-            if (_isStartingEngine)
-                return;
-
-            if (string.IsNullOrWhiteSpace(_engineFolderPath) || _engineInfo == null)
+            if (AddElementButton.ContextMenu != null)
             {
-                System.Windows.MessageBox.Show(this, "Select a valid engine folder first.", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
+                AddElementButton.ContextMenu.PlacementTarget = AddElementButton;
+                AddElementButton.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                AddElementButton.ContextMenu.IsOpen = true;
             }
-
-            if (string.IsNullOrWhiteSpace(_projectFolderPath) || !Directory.Exists(_projectFolderPath))
-            {
-                System.Windows.MessageBox.Show(this, "Select a project folder first.", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            StatusTextBlock.Text = "Engine start is not wired yet.";
         }
 
+        private void AddSpriteMenuItem_Click(object sender, RoutedEventArgs e) => AddSprite();
+        private void AddAnimatedSpriteMenuItem_Click(object sender, RoutedEventArgs e) => AddAnimatedSprite();
+        private void AddTextMenuItem_Click(object sender, RoutedEventArgs e) => AddText();
+        private void AddAudioMenuItem_Click(object sender, RoutedEventArgs e) => AddAudio();
+        private void AddClickableMenuItem_Click(object sender, RoutedEventArgs e) => AddClickable();
+
+        private void HierarchyTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) => OnHierarchySelected();
+
+        // ---- Add element helpers ----
         private static string MakeUniqueName(IEnumerable<BaseElement> elements, string baseName)
         {
             var existing = new HashSet<string>(elements.Select(e => e.Name), StringComparer.OrdinalIgnoreCase);
@@ -2364,7 +2421,6 @@ namespace FluxionJsSceneEditor
 
         private (double x, double y) GetDefaultAddPosition()
         {
-            // Add at current view center in world coordinates.
             var center = new System.Windows.Point(GizmoCanvas.ActualWidth / 2.0, GizmoCanvas.ActualHeight / 2.0);
             var world = SceneToWorldPoint(center);
             return (world.X, world.Y);
@@ -2411,14 +2467,7 @@ namespace FluxionJsSceneEditor
                 FrameHeight = 32,
                 Animations = new List<AnimationModel>
                 {
-                    new AnimationModel
-                    {
-                        Name = "Base",
-                        Frames = new List<string> { "0" },
-                        Speed = 10,
-                        Loop = true,
-                        Autoplay = true
-                    }
+                    new AnimationModel { Name = "Base", Frames = new List<string>{"0"}, Speed = 10, Loop = true, Autoplay = true }
                 }
             };
 
@@ -2477,7 +2526,6 @@ namespace FluxionJsSceneEditor
 
         private void AddClickable()
         {
-            // If a non-audio element is selected, create an inheriting ClickableArea tied to it.
             if (_selected is BaseElement parent && parent is not AudioElement && parent is not ClickableElement)
             {
                 var el = new ClickableElement
@@ -2504,7 +2552,6 @@ namespace FluxionJsSceneEditor
                 return;
             }
 
-            // Otherwise add a standalone clickable.
             var (x, y) = GetDefaultAddPosition();
             var standalone = new ClickableElement
             {
@@ -2527,6 +2574,151 @@ namespace FluxionJsSceneEditor
             RefreshHierarchy();
             RefreshCanvas();
             StatusTextBlock.Text = "Clickable added";
+        }
+
+        private void StartEngine()
+        {
+            if (_isStartingEngine)
+                return;
+
+            if (string.IsNullOrWhiteSpace(_engineFolderPath) || _engineInfo == null)
+            {
+                System.Windows.MessageBox.Show(this, "Select a valid engine folder first.", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_projectFolderPath) || !Directory.Exists(_projectFolderPath))
+            {
+                System.Windows.MessageBox.Show(this, "Select a project folder first.", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            StatusTextBlock.Text = "Engine start is not wired yet.";
+        }
+
+        private static bool TryGetSingleDroppedFile(System.Windows.DragEventArgs e, out string filePath)
+        {
+            filePath = string.Empty;
+            if (!e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop))
+                return false;
+
+            if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is not string[] files)
+                return false;
+
+            if (files.Length != 1)
+                return false;
+
+            filePath = files[0];
+            return !string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath);
+        }
+
+        private void PathTextBox_PreviewDragOver(object sender, System.Windows.DragEventArgs e)
+        {
+            e.Effects = e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop)
+                ? System.Windows.DragDropEffects.Copy
+                : System.Windows.DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private void ImagePathTextBox_Drop(object sender, System.Windows.DragEventArgs e)
+        {
+            if (sender is not System.Windows.Controls.TextBox tb)
+                return;
+
+            if (!TryGetSingleDroppedFile(e, out var file))
+                return;
+
+            var ext = System.IO.Path.GetExtension(file);
+            var ok = string.Equals(ext, ".png", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(ext, ".jpg", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(ext, ".jpeg", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(ext, ".gif", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(ext, ".bmp", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(ext, ".webp", StringComparison.OrdinalIgnoreCase);
+
+            if (!ok)
+            {
+                StatusTextBlock.Text = $"Not an image file: {System.IO.Path.GetFileName(file)}";
+                return;
+            }
+
+            tb.Text = ToBestAssetPath(file);
+            ApplyPropertiesFromPanel();
+            RefreshCanvas();
+            StatusTextBlock.Text = $"Set image: {System.IO.Path.GetFileName(file)}";
+
+            e.Handled = true;
+        }
+
+        private void AudioPathTextBox_Drop(object sender, System.Windows.DragEventArgs e)
+        {
+            if (sender is not System.Windows.Controls.TextBox tb)
+                return;
+
+            if (!TryGetSingleDroppedFile(e, out var file))
+                return;
+
+            var ext = System.IO.Path.GetExtension(file);
+            var ok = string.Equals(ext, ".mp3", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(ext, ".wav", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(ext, ".ogg", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(ext, ".m4a", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(ext, ".aac", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(ext, ".flac", StringComparison.OrdinalIgnoreCase);
+
+            if (!ok)
+            {
+                StatusTextBlock.Text = $"Not an audio file: {System.IO.Path.GetFileName(file)}";
+                return;
+            }
+
+            tb.Text = ToBestAssetPath(file);
+            ApplyPropertiesFromPanel();
+            StatusTextBlock.Text = $"Set audio: {System.IO.Path.GetFileName(file)}";
+
+            e.Handled = true;
+        }
+
+        private string ToBestAssetPath(string absoluteFilePath)
+        {
+            var full = System.IO.Path.GetFullPath(absoluteFilePath);
+
+            static string NormalizeSlashes(string s) => s.Replace('\\', '/');
+
+            string? TryMakeRelative(string baseDir)
+            {
+                try
+                {
+                    var rel = System.IO.Path.GetRelativePath(baseDir, full);
+                    if (rel.StartsWith("..", StringComparison.Ordinal))
+                        return null;
+                    return NormalizeSlashes(rel);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(_loadedSceneFilePath))
+            {
+                var baseDir = System.IO.Path.GetDirectoryName(_loadedSceneFilePath);
+                if (!string.IsNullOrWhiteSpace(baseDir))
+                {
+                    var rel = TryMakeRelative(baseDir);
+                    if (!string.IsNullOrWhiteSpace(rel))
+                        return rel;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(_projectFolderPath) && Directory.Exists(_projectFolderPath))
+            {
+                var rel = TryMakeRelative(_projectFolderPath);
+                if (!string.IsNullOrWhiteSpace(rel))
+                    return rel;
+            }
+
+            return NormalizeSlashes(full);
         }
     }
 }
