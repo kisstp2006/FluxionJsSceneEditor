@@ -418,6 +418,7 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0"
@@ -467,6 +468,29 @@
                                             x:Name="PropLayerTextBox"
                                             Style="{StaticResource PropTextBoxStyle}"
                                             LostFocus="PropTextBox_LostFocus"/>
+                                    <TextBlock Grid.Row="2"
+                                            Grid.Column="2"
+                                            Style="{StaticResource PropLabelStyle}"
+                                            Text="Opacity"
+                                            ToolTip="0=invisible, 255=visible"/>
+                                    <TextBox Grid.Row="2"
+                                            Grid.Column="3"
+                                            x:Name="PropOpacityTextBox"
+                                            Style="{StaticResource PropTextBoxStyle}"
+                                            ToolTip="0 = invisible, 255 = fully visible"
+                                            LostFocus="PropTextBox_LostFocus"/>
+                                    
+                                    <!-- Opacity slider for easier control -->
+                                    <Slider Grid.Row="3"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="4"
+                                            x:Name="PropOpacitySlider"
+                                            Minimum="0"
+                                            Maximum="255"
+                                            TickFrequency="1"
+                                            IsSnapToTickEnabled="True"
+                                            ValueChanged="OpacitySlider_ValueChanged"
+                                            Margin="0,4,0,0"/>
                                 </Grid>
                             </GroupBox>
 

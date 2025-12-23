@@ -10,7 +10,14 @@ namespace FluxionJsSceneEditor
     {
         public string Name { get; set; } = string.Empty;
         public CameraModel Camera { get; set; } = new CameraModel();
+        public List<FontModel> Fonts { get; } = new();
         public List<BaseElement> Elements { get; } = new();
+    }
+
+    public sealed class FontModel
+    {
+        public string Family { get; set; } = string.Empty;
+        public string Src { get; set; } = string.Empty;
     }
 
     public sealed class CameraModel
@@ -33,6 +40,11 @@ namespace FluxionJsSceneEditor
 
         public int Layer { get; set; } = 0;
         public bool Active { get; set; } = true;
+        
+        /// <summary>
+        /// Opacity value from 0 (fully invisible) to 255 (fully visible).
+        /// </summary>
+        public int Opacity { get; set; } = 255;
 
         public abstract string ElementType { get; }
 
@@ -86,6 +98,13 @@ namespace FluxionJsSceneEditor
         public bool HasClickableArea { get; set; }
         public string? ParentName { get; set; }
 
+        // In engine XML, ClickableArea width/height may be omitted to inherit from parent.
+        public double? OptionalWidth { get; set; }
+        public double? OptionalHeight { get; set; }
+
+        public double GetEffectiveWidth(double parentWidth) => OptionalWidth ?? parentWidth;
+        public double GetEffectiveHeight(double parentHeight) => OptionalHeight ?? parentHeight;
+
         public override string DisplayName => string.IsNullOrWhiteSpace(ParentName)
             ? $"{ElementType}: {Name} (Layer {Layer})"
             : $"{ElementType}: {Name}";
@@ -125,7 +144,17 @@ namespace FluxionJsSceneEditor
 
             sb.AppendLine("    ");
 
-            // Map Clickable elements to nested <ClickableArea/> inside the owning <Sprite>.
+            foreach (var f in scene.Fonts)
+            {
+                if (string.IsNullOrWhiteSpace(f.Family) && string.IsNullOrWhiteSpace(f.Src))
+                    continue;
+                sb.AppendLine($"    <Font family=\"{Escape(f.Family ?? string.Empty)}\" src=\"{Escape(f.Src ?? string.Empty)}\" />");
+            }
+
+            if (scene.Fonts.Count > 0)
+                sb.AppendLine("    ");
+
+            // Map Clickable elements to nested <ClickableArea/> inside the owning element.
             var clickableByName = new Dictionary<string, ClickableElement>(StringComparer.OrdinalIgnoreCase);
             foreach (var el in scene.Elements)
             {
@@ -140,18 +169,71 @@ namespace FluxionJsSceneEditor
                 switch (el)
                 {
                     case TextElement te:
-                        sb.AppendLine(
-                            $"    <Text " +
-                            $"name=\"{Escape(te.Name)}\" " +
-                            (te.Active ? "" : $"Active=\"false\" ") +
-                            $"text=\"{Escape(te.Text ?? string.Empty)}\" " +
-                            $"x=\"{te.X.ToString(CultureInfo.InvariantCulture)}\" " +
-                            $"y=\"{te.Y.ToString(CultureInfo.InvariantCulture)}\" " +
-                            $"fontSize=\"{te.FontSize.ToString(CultureInfo.InvariantCulture)}\" " +
-                            $"fontFamily=\"{Escape(te.FontFamily ?? string.Empty)}\" " +
-                            $"color=\"{Escape(te.Color ?? string.Empty)}\" " +
-                            $"layer=\"{te.Layer.ToString(CultureInfo.InvariantCulture)}\" />");
-                        break;
+                        {
+                            ClickableElement? ce = null;
+
+                            foreach (var cand in clickableByName.Values)
+                            {
+                                if (consumedClickables.Contains(cand))
+                                    continue;
+                                if (string.Equals(cand.ParentName, te.Name, StringComparison.OrdinalIgnoreCase) && cand.HasClickableArea)
+                                {
+                                    ce = cand;
+                                    break;
+                                }
+                            }
+
+                            if (ce == null && clickableByName.TryGetValue(te.Name + "Hitbox", out var hitbox))
+                                ce = hitbox;
+                            else if (ce == null && clickableByName.TryGetValue(te.Name + "_ClickableArea", out var ca))
+                                ce = ca;
+
+                            if (ce is { HasClickableArea: true })
+                            {
+                                consumedClickables.Add(ce);
+
+                                sb.AppendLine(
+                                    $"    <Text " +
+                                    $"name=\"{Escape(te.Name)}\" " +
+                                    (te.Active ? "" : $"Active=\"false\" ") +
+                                    (te.Opacity < 255 ? $"opacity=\"{te.Opacity}\" " : "") +
+                                    $"text=\"{Escape(te.Text ?? string.Empty)}\" " +
+                                    $"x=\"{te.X.ToString(CultureInfo.InvariantCulture)}\" " +
+                                    $"y=\"{te.Y.ToString(CultureInfo.InvariantCulture)}\" " +
+                                    (te.FontSize > 0 ? $"fontSize=\"{te.FontSize.ToString(CultureInfo.InvariantCulture)}\" " : "") +
+                                    (!string.IsNullOrWhiteSpace(te.FontFamily) ? $"fontFamily=\"{Escape(te.FontFamily)}\" " : "") +
+                                    (!string.IsNullOrWhiteSpace(te.Color) ? $"color=\"{Escape(te.Color)}\" " : "") +
+                                    $"layer=\"{te.Layer.ToString(CultureInfo.InvariantCulture)}\">");
+
+                                sb.Append("        <ClickableArea name=\"");
+                                sb.Append(Escape(ce.Name));
+                                sb.Append("\"");
+                                if (ce.OptionalWidth.HasValue)
+                                    sb.Append($" width=\"{ce.OptionalWidth.Value.ToString(CultureInfo.InvariantCulture)}\"");
+                                if (ce.OptionalHeight.HasValue)
+                                    sb.Append($" height=\"{ce.OptionalHeight.Value.ToString(CultureInfo.InvariantCulture)}\"");
+                                sb.AppendLine(" />");
+
+                                sb.AppendLine("    </Text>");
+                            }
+                            else
+                            {
+                                sb.AppendLine(
+                                    $"    <Text " +
+                                    $"name=\"{Escape(te.Name)}\" " +
+                                    (te.Active ? "" : $"Active=\"false\" ") +
+                                    (te.Opacity < 255 ? $"opacity=\"{te.Opacity}\" " : "") +
+                                    $"text=\"{Escape(te.Text ?? string.Empty)}\" " +
+                                    $"x=\"{te.X.ToString(CultureInfo.InvariantCulture)}\" " +
+                                    $"y=\"{te.Y.ToString(CultureInfo.InvariantCulture)}\" " +
+                                    (te.FontSize > 0 ? $"fontSize=\"{te.FontSize.ToString(CultureInfo.InvariantCulture)}\" " : "") +
+                                    (!string.IsNullOrWhiteSpace(te.FontFamily) ? $"fontFamily=\"{Escape(te.FontFamily)}\" " : "") +
+                                    (!string.IsNullOrWhiteSpace(te.Color) ? $"color=\"{Escape(te.Color)}\" " : "") +
+                                    $"layer=\"{te.Layer.ToString(CultureInfo.InvariantCulture)}\" />");
+                            }
+
+                            break;
+                        }
 
                     case AudioElement ae:
                         sb.AppendLine(
@@ -212,13 +294,23 @@ namespace FluxionJsSceneEditor
                                     $"    <Sprite " +
                                     $"name=\"{Escape(se.Name)}\" " +
                                     (se.Active ? "" : $"Active=\"false\" ") +
+                                    (se.Opacity < 255 ? $"opacity=\"{se.Opacity}\" " : "") +
                                     $"imageSrc=\"{Escape(se.ImageSrc ?? string.Empty)}\" " +
                                     $"x=\"{se.X.ToString(CultureInfo.InvariantCulture)}\" " +
                                     $"y=\"{se.Y.ToString(CultureInfo.InvariantCulture)}\" " +
                                     $"width=\"{se.Width.ToString(CultureInfo.InvariantCulture)}\" " +
                                     $"height=\"{se.Height.ToString(CultureInfo.InvariantCulture)}\" " +
                                     $"layer=\"{se.Layer.ToString(CultureInfo.InvariantCulture)}\">");
-                                sb.AppendLine($"        <ClickableArea name=\"{Escape(ce.Name)}\" />");
+
+                                sb.Append("        <ClickableArea name=\"");
+                                sb.Append(Escape(ce.Name));
+                                sb.Append("\"");
+                                if (ce.OptionalWidth.HasValue)
+                                    sb.Append($" width=\"{ce.OptionalWidth.Value.ToString(CultureInfo.InvariantCulture)}\"");
+                                if (ce.OptionalHeight.HasValue)
+                                    sb.Append($" height=\"{ce.OptionalHeight.Value.ToString(CultureInfo.InvariantCulture)}\"");
+                                sb.AppendLine(" />");
+
                                 sb.AppendLine("    </Sprite>");
                             }
                             else
@@ -227,6 +319,7 @@ namespace FluxionJsSceneEditor
                                     $"    <Sprite " +
                                     $"name=\"{Escape(se.Name)}\" " +
                                     (se.Active ? "" : $"Active=\"false\" ") +
+                                    (se.Opacity < 255 ? $"opacity=\"{se.Opacity}\" " : "") +
                                     $"imageSrc=\"{Escape(se.ImageSrc ?? string.Empty)}\" " +
                                     $"x=\"{se.X.ToString(CultureInfo.InvariantCulture)}\" " +
                                     $"y=\"{se.Y.ToString(CultureInfo.InvariantCulture)}\" " +
@@ -245,6 +338,7 @@ namespace FluxionJsSceneEditor
                                 $"    <AnimatedSprite " +
                                 $"name=\"{Escape(ase.Name)}\" " +
                                 (ase.Active ? "" : $"Active=\"false\" ") +
+                                (ase.Opacity < 255 ? $"opacity=\"{ase.Opacity}\" " : "") +
                                 $"imageSrc=\"{Escape(ase.ImageSrc ?? string.Empty)}\" " +
                                 $"x=\"{ase.X.ToString(CultureInfo.InvariantCulture)}\" " +
                                 $"y=\"{ase.Y.ToString(CultureInfo.InvariantCulture)}\" " +
@@ -314,6 +408,23 @@ namespace FluxionJsSceneEditor
                     scene.Camera.Height = ParseDouble(hAttr);
             }
 
+            // Fonts: <Font family="..." src="..." />
+            var fontNodes = sceneNode.SelectNodes("./Font");
+            if (fontNodes != null)
+            {
+                foreach (XmlNode fn in fontNodes)
+                {
+                    if (fn.NodeType != XmlNodeType.Element)
+                        continue;
+
+                    scene.Fonts.Add(new FontModel
+                    {
+                        Family = GetAttrAnyCase(fn, "family", "Family") ?? string.Empty,
+                        Src = GetAttrAnyCase(fn, "src", "Src") ?? string.Empty
+                    });
+                }
+            }
+
             // Engine format: elements are direct children of <Scene>
             // Older editor format: elements are under <Elements>
             var elementNodes = sceneNode.SelectNodes("./Sprite|./AnimatedSprite|./Audio|./Clickable|./Text|./Element")
@@ -344,7 +455,8 @@ namespace FluxionJsSceneEditor
                             Height = ParseDoubleOrDefault(GetAttrAnyCase(n, "height", "Height"), 1),
                             ImageSrc = GetAttrAnyCase(n, "imageSrc", "ImageSrc"),
                             Layer = ParseIntOrDefault(GetAttrAnyCase(n, "layer", "Layer"), 0),
-                            Active = ParseBoolOrDefault(GetAttrAnyCase(n, "Active", "active"), true)
+                            Active = ParseBoolOrDefault(GetAttrAnyCase(n, "Active", "active"), true),
+                            Opacity = ParseIntOrDefault(GetAttrAnyCase(n, "opacity", "Opacity"), 255)
                         };
 
                         scene.Elements.Add(sprite);
@@ -354,6 +466,9 @@ namespace FluxionJsSceneEditor
                         var clickableArea = n.SelectSingleNode("./ClickableArea") ?? n.SelectSingleNode("./ClickableArea[@name]");
                         if (clickableArea != null)
                         {
+                            var w = GetAttrAnyCase(clickableArea, "width", "Width");
+                            var h = GetAttrAnyCase(clickableArea, "height", "Height");
+
                             scene.Elements.Add(new ClickableElement
                             {
                                 Name = GetAttrAnyCase(clickableArea, "name", "Name") ?? (name + "_ClickableArea"),
@@ -361,6 +476,8 @@ namespace FluxionJsSceneEditor
                                 Y = sprite.Y,
                                 Width = sprite.Width,
                                 Height = sprite.Height,
+                                OptionalWidth = string.IsNullOrWhiteSpace(w) ? null : ParseDouble(w),
+                                OptionalHeight = string.IsNullOrWhiteSpace(h) ? null : ParseDouble(h),
                                 HasClickableArea = true,
                                 Layer = sprite.Layer,
                                 ParentName = sprite.Name
@@ -383,7 +500,8 @@ namespace FluxionJsSceneEditor
                             FrameWidth = ParseIntOrDefault(GetAttrAnyCase(n, "frameWidth", "FrameWidth"), 32),
                             FrameHeight = ParseIntOrDefault(GetAttrAnyCase(n, "frameHeight", "FrameHeight"), 32),
                             Layer = ParseIntOrDefault(GetAttrAnyCase(n, "layer", "Layer"), 0),
-                            Active = ParseBoolOrDefault(GetAttrAnyCase(n, "Active", "active"), true)
+                            Active = ParseBoolOrDefault(GetAttrAnyCase(n, "Active", "active"), true),
+                            Opacity = ParseIntOrDefault(GetAttrAnyCase(n, "opacity", "Opacity"), 255)
                         };
 
                         // Parse nested Animation elements
@@ -438,13 +556,18 @@ namespace FluxionJsSceneEditor
 
                     if (localName == "Clickable" || localName == "ClickableArea")
                     {
+                        var w = GetAttrAnyCase(n, "width", "Width");
+                        var h = GetAttrAnyCase(n, "height", "Height");
+
                         scene.Elements.Add(new ClickableElement
                         {
                             Name = name,
                             X = ParseDouble(GetAttrAnyCase(n, "x", "X")),
                             Y = ParseDouble(GetAttrAnyCase(n, "y", "Y")),
-                            Width = ParseDoubleOrDefault(GetAttrAnyCase(n, "width", "Width"), 0.2),
-                            Height = ParseDoubleOrDefault(GetAttrAnyCase(n, "height", "Height"), 0.2),
+                            Width = string.IsNullOrWhiteSpace(w) ? 0.2 : ParseDoubleOrDefault(w, 0.2),
+                            Height = string.IsNullOrWhiteSpace(h) ? 0.2 : ParseDoubleOrDefault(h, 0.2),
+                            OptionalWidth = string.IsNullOrWhiteSpace(w) ? null : ParseDouble(w),
+                            OptionalHeight = string.IsNullOrWhiteSpace(h) ? null : ParseDouble(h),
                             HasClickableArea = ParseBoolOrDefault(GetAttrAnyCase(n, "hasClickableArea", "HasClickableArea"), true),
                             Layer = ParseIntOrDefault(GetAttrAnyCase(n, "layer", "Layer"), 0),
                             Active = ParseBoolOrDefault(GetAttrAnyCase(n, "Active", "active"), true)
@@ -454,7 +577,7 @@ namespace FluxionJsSceneEditor
 
                     if (localName == "Text")
                     {
-                        scene.Elements.Add(new TextElement
+                        var textEl = new TextElement
                         {
                             Name = name,
                             X = ParseDouble(GetAttrAnyCase(n, "x", "X")),
@@ -464,8 +587,34 @@ namespace FluxionJsSceneEditor
                             Color = GetAttrAnyCase(n, "color", "Color"),
                             Text = GetAttrAnyCase(n, "text", "Text") ?? n.InnerText?.Trim(),
                             Layer = ParseIntOrDefault(GetAttrAnyCase(n, "layer", "Layer"), 0),
-                            Active = ParseBoolOrDefault(GetAttrAnyCase(n, "Active", "active"), true)
-                        });
+                            Active = ParseBoolOrDefault(GetAttrAnyCase(n, "Active", "active"), true),
+                            Opacity = ParseIntOrDefault(GetAttrAnyCase(n, "opacity", "Opacity"), 255)
+                        };
+
+                        scene.Elements.Add(textEl);
+
+                        // Engine format: nested <ClickableArea /> inside <Text>
+                        var clickableArea = n.SelectSingleNode("./ClickableArea") ?? n.SelectSingleNode("./ClickableArea[@name]");
+                        if (clickableArea != null)
+                        {
+                            var w = GetAttrAnyCase(clickableArea, "width", "Width");
+                            var h = GetAttrAnyCase(clickableArea, "height", "Height");
+
+                            scene.Elements.Add(new ClickableElement
+                            {
+                                Name = GetAttrAnyCase(clickableArea, "name", "Name") ?? (name + "Hitbox"),
+                                X = textEl.X,
+                                Y = textEl.Y,
+                                Width = 0,
+                                Height = 0,
+                                OptionalWidth = string.IsNullOrWhiteSpace(w) ? null : ParseDouble(w),
+                                OptionalHeight = string.IsNullOrWhiteSpace(h) ? null : ParseDouble(h),
+                                HasClickableArea = true,
+                                Layer = textEl.Layer,
+                                ParentName = textEl.Name
+                            });
+                        }
+
                         continue;
                     }
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -1126,6 +1127,8 @@ namespace FluxionJsSceneEditor
             PropWidthTextBox.Text = _selected.Width.ToString(CultureInfo.InvariantCulture);
             PropHeightTextBox.Text = _selected.Height.ToString(CultureInfo.InvariantCulture);
             PropLayerTextBox.Text = _selected.Layer.ToString(CultureInfo.InvariantCulture);
+            PropOpacityTextBox.Text = _selected.Opacity.ToString(CultureInfo.InvariantCulture);
+            PropOpacitySlider.Value = _selected.Opacity;
         }
 
         // ---- Canvas rendering and interaction ----
@@ -1135,6 +1138,9 @@ namespace FluxionJsSceneEditor
             if (ContentCanvas == null || _scene == null) return;
 
             ContentCanvas.Children.Clear();
+
+            // Cache measured text sizes in world units so ClickableAreas can inherit them.
+            var textWorldSize = new Dictionary<string, (double w, double h)>(StringComparer.OrdinalIgnoreCase);
 
             var ordered = new List<BaseElement>(_scene.Elements);
             ordered.Sort((a, b) =>
@@ -1175,52 +1181,59 @@ namespace FluxionJsSceneEditor
 
                     // Text uses its own measured size; no explicit Width/Height.
                     tb.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+
+                    // Compute text size in world units (reverse of transforms applied above).
+                    var measuredWpx = tb.DesiredSize.Width * textScale;
+                    var measuredHpx = tb.DesiredSize.Height * textScale;
+                    var worldW = measuredWpx / scale / _viewCamZoom;
+                    var worldH = measuredHpx / scale / _viewCamZoom;
+
+                    if (double.IsFinite(worldW) && double.IsFinite(worldH) && worldW > 0 && worldH > 0)
+                        textWorldSize[te.Name] = (worldW, worldH);
                 }
                 else
                 {
                     var sizePx = WorldToSceneSize(el.Width, el.Height);
 
-                    if (el is SpriteElement se && !string.IsNullOrWhiteSpace(se.ImageSrc))
+                    if (el is ClickableElement ce)
                     {
-                        System.Windows.Controls.Image? img = new System.Windows.Controls.Image();
-                        try
+                        // ClickableAreas can inherit parent dimensions (Text behaves like Sprite in-engine).
+                        var parentSize = (w: 0.0, h: 0.0);
+                        if (!string.IsNullOrWhiteSpace(ce.ParentName))
                         {
-                            var resolved = ResolveSpriteImagePath(se.ImageSrc);
-                            if (!string.IsNullOrWhiteSpace(resolved))
-                                img.Source = new BitmapImage(ToUri(resolved));
-                        }
-                        catch
-                        {
-                            img = null;
-                        }
-                        if (img != null)
-                        {
-                            img.Width = sizePx.Width;
-                            img.Height = sizePx.Height;
-                            visual = img;
-                        }
-                        else
-                        {
-                            visual = new System.Windows.Shapes.Rectangle
+                            var parent = _scene.Elements.FirstOrDefault(x => string.Equals(x.Name, ce.ParentName, StringComparison.OrdinalIgnoreCase));
+                            if (parent != null)
                             {
-                                Width = sizePx.Width,
-                                Height = sizePx.Height,
-                                Fill = System.Windows.Media.Brushes.SteelBlue,
-                                Stroke = System.Windows.Media.Brushes.White,
-                                StrokeThickness = 1
-                            };
+                                if (parent is TextElement && textWorldSize.TryGetValue(parent.Name, out var tws))
+                                    parentSize = (tws.w, tws.h);
+                                else
+                                    parentSize = (parent.Width, parent.Height);
+                            }
                         }
-                    }
-                    else if (el is AnimatedSpriteElement ase)
-                    {
-                        // Try to display the spritesheet or first frame
-                        System.Windows.Controls.Image? img = null;
-                        if (!string.IsNullOrWhiteSpace(ase.ImageSrc))
+
+                        var effW = ce.OptionalWidth ?? (parentSize.w > 0 ? parentSize.w : ce.Width);
+                        var effH = ce.OptionalHeight ?? (parentSize.h > 0 ? parentSize.h : ce.Height);
+
+                        sizePx = WorldToSceneSize(effW, effH);
+
+                        visual = new System.Windows.Shapes.Rectangle
                         {
-                            img = new System.Windows.Controls.Image();
+                            Width = sizePx.Width,
+                            Height = sizePx.Height,
+                            Fill = System.Windows.Media.Brushes.Transparent,
+                            Stroke = System.Windows.Media.Brushes.DeepSkyBlue,
+                            StrokeThickness = 2,
+                            Opacity = 0.9
+                        };
+                    }
+                    else
+                    {
+                        if (el is SpriteElement se && !string.IsNullOrWhiteSpace(se.ImageSrc))
+                        {
+                            System.Windows.Controls.Image? img = new System.Windows.Controls.Image();
                             try
                             {
-                                var resolved = ResolveSpriteImagePath(ase.ImageSrc);
+                                var resolved = ResolveSpriteImagePath(se.ImageSrc);
                                 if (!string.IsNullOrWhiteSpace(resolved))
                                     img.Source = new BitmapImage(ToUri(resolved));
                             }
@@ -1228,53 +1241,74 @@ namespace FluxionJsSceneEditor
                             {
                                 img = null;
                             }
+                            if (img != null)
+                            {
+                                img.Width = sizePx.Width;
+                                img.Height = sizePx.Height;
+                                visual = img;
+                            }
+                            else
+                            {
+                                visual = new System.Windows.Shapes.Rectangle
+                                {
+                                    Width = sizePx.Width,
+                                    Height = sizePx.Height,
+                                    Fill = System.Windows.Media.Brushes.SteelBlue,
+                                    Stroke = System.Windows.Media.Brushes.White,
+                                    StrokeThickness = 1
+                                };
+                            }
                         }
+                        else if (el is AnimatedSpriteElement ase)
+                        {
+                            // Try to display the spritesheet or first frame
+                            System.Windows.Controls.Image? img = null;
+                            if (!string.IsNullOrWhiteSpace(ase.ImageSrc))
+                            {
+                                img = new System.Windows.Controls.Image();
+                                try
+                                {
+                                    var resolved = ResolveSpriteImagePath(ase.ImageSrc);
+                                    if (!string.IsNullOrWhiteSpace(resolved))
+                                        img.Source = new BitmapImage(ToUri(resolved));
+                                }
+                                catch
+                                {
+                                    img = null;
+                                }
+                            }
 
-                        if (img != null)
-                        {
-                            img.Width = sizePx.Width;
-                            img.Height = sizePx.Height;
-                            visual = img;
-                        }
-                        else
-                        {
-                            // Draw a placeholder with animated sprite indicator
-                            var grid = new Grid
+                            if (img != null)
                             {
-                                Width = sizePx.Width,
-                                Height = sizePx.Height
-                            };
-                            grid.Children.Add(new System.Windows.Shapes.Rectangle
+                                img.Width = sizePx.Width;
+                                img.Height = sizePx.Height;
+                                visual = img;
+                            }
+                            else
                             {
-                                Fill = System.Windows.Media.Brushes.Purple,
-                                Stroke = System.Windows.Media.Brushes.Magenta,
-                                StrokeThickness = 2,
-                                Opacity = 0.8
-                            });
-                            grid.Children.Add(new TextBlock
-                            {
-                                Text = "🎬",
-                                FontSize = Math.Min(sizePx.Width, sizePx.Height) * 0.4,
-                                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                                VerticalAlignment = System.Windows.VerticalAlignment.Center,
-                                Foreground = System.Windows.Media.Brushes.White
-                            });
-                            visual = grid;
-                        }
-                    }
-                    else
-                    {
-                        if (el is ClickableElement)
-                        {
-                            visual = new System.Windows.Shapes.Rectangle
-                            {
-                                Width = sizePx.Width,
-                                Height = sizePx.Height,
-                                Fill = System.Windows.Media.Brushes.Transparent,
-                                Stroke = System.Windows.Media.Brushes.DeepSkyBlue,
-                                StrokeThickness = 2,
-                                Opacity = 0.9
-                            };
+                                // Draw a placeholder with animated sprite indicator
+                                var grid = new Grid
+                                {
+                                    Width = sizePx.Width,
+                                    Height = sizePx.Height
+                                };
+                                grid.Children.Add(new System.Windows.Shapes.Rectangle
+                                {
+                                    Fill = System.Windows.Media.Brushes.Purple,
+                                    Stroke = System.Windows.Media.Brushes.Magenta,
+                                    StrokeThickness = 2,
+                                    Opacity = 0.8
+                                });
+                                grid.Children.Add(new TextBlock
+                                {
+                                    Text = "🎬",
+                                    FontSize = Math.Min(sizePx.Width, sizePx.Height) * 0.4,
+                                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                                    VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                                    Foreground = System.Windows.Media.Brushes.White
+                                });
+                                visual = grid;
+                            }
                         }
                         else
                         {
@@ -1292,10 +1326,16 @@ namespace FluxionJsSceneEditor
 
                 visual.Tag = el;
 
-                // Apply reduced opacity for inactive elements
+                // Apply opacity from element (0-255 scale converted to 0-1)
+                var baseOpacity = el.Opacity / 255.0;
                 if (!el.Active)
                 {
-                    visual.Opacity = 0.4;
+                    // Apply additional dimming for inactive elements
+                    visual.Opacity = baseOpacity * 0.4;
+                }
+                else
+                {
+                    visual.Opacity = baseOpacity;
                 }
 
                 var topLeft = WorldToScenePoint(el.X, el.Y);
@@ -1366,19 +1406,78 @@ namespace FluxionJsSceneEditor
                     return;
                 }
 
-                // Find all elements at this click point
+                // Find all elements at this click point (use model-space bounds, not Visual.ActualWidth/ActualHeight)
                 var elementsAtPoint = new List<BaseElement>();
-                foreach (FrameworkElement child in ContentCanvas.Children)
+
+                // Pre-measure text bounds in world units.
+                var textWorldSize = new Dictionary<string, (double w, double h)>(StringComparer.OrdinalIgnoreCase);
+                foreach (var el in _scene.Elements)
                 {
-                    var el = child.Tag as BaseElement;
-                    if (el == null) continue;
-                    var left = Canvas.GetLeft(child);
-                    var top = Canvas.GetTop(child);
-                    var rect = new System.Windows.Rect(left, top, child.ActualWidth, child.ActualHeight);
-                    if (rect.Contains(point))
+                    if (el is not TextElement te)
+                        continue;
+
+                    var baseFontSize = te.FontSize > 0 ? te.FontSize : 16;
+                    var (_, _, _, _, scale) = GetSceneViewport();
+                    var textScale = _viewCamZoom * scale;
+                    if (!double.IsFinite(textScale) || textScale <= 0)
+                        textScale = 1;
+
+                    var tb = new TextBlock
                     {
-                        elementsAtPoint.Add(el);
+                        Text = te.Text ?? string.Empty,
+                        FontSize = baseFontSize,
+                    };
+                    if (!string.IsNullOrWhiteSpace(te.FontFamily))
+                        tb.FontFamily = new System.Windows.Media.FontFamily(te.FontFamily);
+
+                    tb.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+
+                    var measuredWpx = tb.DesiredSize.Width * textScale;
+                    var measuredHpx = tb.DesiredSize.Height * textScale;
+                    var worldW = measuredWpx / scale / _viewCamZoom;
+                    var worldH = measuredHpx / scale / _viewCamZoom;
+
+                    if (double.IsFinite(worldW) && double.IsFinite(worldH) && worldW > 0 && worldH > 0)
+                        textWorldSize[te.Name] = (worldW, worldH);
+                }
+
+                foreach (var el in _scene.Elements)
+                {
+                    if (el is AudioElement)
+                        continue;
+
+                    // Skip child clickables from selection-by-click (they are handled via hierarchy/gizmo)
+                    if (el is ClickableElement ce && !string.IsNullOrWhiteSpace(ce.ParentName))
+                        continue;
+
+                    Rect rect;
+
+                    if (el is TextElement te)
+                    {
+                        var (w, h) = textWorldSize.TryGetValue(te.Name, out var s) ? s : (0.0, 0.0);
+                        if (w <= 0 || h <= 0)
+                            continue;
+
+                        var tl = WorldToScenePoint(te.X, te.Y);
+                        var size = WorldToSceneSize(w, h);
+                        rect = new Rect(tl.X, tl.Y, size.Width, size.Height);
                     }
+                    else if (el is ClickableElement clickable)
+                    {
+                        // Standalone clickable
+                        var tl = WorldToScenePoint(clickable.X, clickable.Y);
+                        var size = WorldToSceneSize(clickable.Width, clickable.Height);
+                        rect = new Rect(tl.X, tl.Y, size.Width, size.Height);
+                    }
+                    else
+                    {
+                        var tl = WorldToScenePoint(el.X, el.Y);
+                        var size = WorldToSceneSize(el.Width, el.Height);
+                        rect = new Rect(tl.X, tl.Y, size.Width, size.Height);
+                    }
+
+                    if (rect.Contains(point))
+                        elementsAtPoint.Add(el);
                 }
 
                 if (elementsAtPoint.Count > 0)
@@ -1386,12 +1485,11 @@ namespace FluxionJsSceneEditor
                     // Sort by layer descending (highest layer first), then by name for consistent ordering
                     elementsAtPoint.Sort((a, b) =>
                     {
-                        var byLayer = b.Layer.CompareTo(a.Layer); // Descending
+                        var byLayer = b.Layer.CompareTo(a.Layer);
                         if (byLayer != 0) return byLayer;
                         return StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
                     });
 
-                    // Check if clicking at the same position - cycle through elements
                     var isSamePosition = Math.Abs(point.X - _lastClickPoint.X) < 5 &&
                                          Math.Abs(point.Y - _lastClickPoint.Y) < 5;
 
@@ -1603,6 +1701,17 @@ namespace FluxionJsSceneEditor
             RefreshCanvas();
         }
 
+        private void OpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_isUpdatingPropertiesPanel) return;
+            if (_selected == null) return;
+
+            var opacity = Math.Clamp((int)e.NewValue, 0, 255);
+            _selected.Opacity = opacity;
+            PropOpacityTextBox.Text = opacity.ToString(CultureInfo.InvariantCulture);
+            RefreshCanvas();
+        }
+
         private (double targetW, double targetH) GetTargetResolution()
         {
             // Prefer the scene camera's declared viewport size when present.
@@ -1695,265 +1804,26 @@ namespace FluxionJsSceneEditor
                 PropActiveCheckBox.IsChecked = el.Active;
                 PropXTextBox.Text = el.X.ToString(CultureInfo.InvariantCulture);
                 PropYTextBox.Text = el.Y.ToString(CultureInfo.InvariantCulture);
-                PropWidthTextBox.Text = el.Width.ToString(CultureInfo.InvariantCulture);
-                PropHeightTextBox.Text = el.Height.ToString(CultureInfo.InvariantCulture);
+
+                if (el is ClickableElement ceSel)
+                {
+                    // Empty width/height means "inherit from parent".
+                    PropWidthTextBox.Text = ceSel.OptionalWidth.HasValue ? ceSel.OptionalWidth.Value.ToString(CultureInfo.InvariantCulture) : string.Empty;
+                    PropHeightTextBox.Text = ceSel.OptionalHeight.HasValue ? ceSel.OptionalHeight.Value.ToString(CultureInfo.InvariantCulture) : string.Empty;
+                }
+                else
+                {
+                    PropWidthTextBox.Text = el.Width.ToString(CultureInfo.InvariantCulture);
+                    PropHeightTextBox.Text = el.Height.ToString(CultureInfo.InvariantCulture);
+                }
+
                 PropLayerTextBox.Text = el.Layer.ToString(CultureInfo.InvariantCulture);
-
-                // Clear text props by default
-                PropTextContentTextBox.Text = string.Empty;
-                PropFontSizeTextBox.Text = string.Empty;
-                PropFontFamilyTextBox.Text = string.Empty;
-                PropTextColorTextBox.Text = string.Empty;
-
-                if (el is SpriteElement se)
-                    PropImageSrcTextBox.Text = se.ImageSrc ?? string.Empty;
-                else
-                    PropImageSrcTextBox.Text = string.Empty;
-
-                if (el is AnimatedSpriteElement ase)
-                {
-                    PropAnimImageSrcTextBox.Text = ase.ImageSrc ?? string.Empty;
-                    PropFrameWidthTextBox.Text = ase.FrameWidth.ToString(CultureInfo.InvariantCulture);
-                    PropFrameHeightTextBox.Text = ase.FrameHeight.ToString(CultureInfo.InvariantCulture);
-                    RefreshAnimationsList(ase);
-                }
-                else
-                {
-                    PropAnimImageSrcTextBox.Text = string.Empty;
-                    PropFrameWidthTextBox.Text = string.Empty;
-                    PropFrameHeightTextBox.Text = string.Empty;
-                    AnimationsListBox.Items.Clear();
-                    ClearSelectedAnimationProps();
-                }
-
-                if (el is TextElement te)
-                {
-                    PropTextContentTextBox.Text = te.Text ?? string.Empty;
-                    PropFontSizeTextBox.Text = te.FontSize.ToString(CultureInfo.InvariantCulture);
-                    PropFontFamilyTextBox.Text = te.FontFamily ?? string.Empty;
-                    PropTextColorTextBox.Text = te.Color ?? string.Empty;
-                }
-
-                if (el is AudioElement ae)
-                {
-                    PropAudioSrcTextBox.Text = ae.Src ?? string.Empty;
-                    PropAudioLoopCheckBox.IsChecked = ae.Loop;
-                    PropAudioAutoplayCheckBox.IsChecked = ae.Autoplay;
-                }
-                else
-                {
-                    PropAudioSrcTextBox.Text = string.Empty;
-                    PropAudioLoopCheckBox.IsChecked = false;
-                    PropAudioAutoplayCheckBox.IsChecked = false;
-                }
-
-                if (el is ClickableElement ce)
-                    PropHasClickableCheckBox.IsChecked = ce.HasClickableArea;
-                else
-                    PropHasClickableCheckBox.IsChecked = false;
-
-                RefreshCanvas();
+                PropOpacityTextBox.Text = el.Opacity.ToString(CultureInfo.InvariantCulture);
+                PropOpacitySlider.Value = el.Opacity;
             }
             finally
             {
                 _isUpdatingPropertiesPanel = false;
-            }
-        }
-
-        private void PropTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (_isUpdatingPropertiesPanel) return;
-            ApplyPropertiesFromPanel();
-        }
-
-        private void PropCheckBox_Changed(object sender, RoutedEventArgs e)
-        {
-            if (_isUpdatingPropertiesPanel) return;
-            ApplyPropertiesFromPanel();
-        }
-
-        // ---- Animation List Management ----
-        private AnimationModel? _selectedAnimation;
-
-        private void RefreshAnimationsList(AnimatedSpriteElement ase)
-        {
-            AnimationsListBox.Items.Clear();
-            foreach (var anim in ase.Animations)
-            {
-                AnimationsListBox.Items.Add(new ListBoxItem { Content = anim.Name, Tag = anim });
-            }
-
-            if (ase.Animations.Count > 0)
-            {
-                AnimationsListBox.SelectedIndex = 0;
-            }
-            else
-            {
-                ClearSelectedAnimationProps();
-            }
-
-            SelectedAnimationPropsGroup.Visibility = ase.Animations.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        private void ClearSelectedAnimationProps()
-        {
-            _selectedAnimation = null;
-            PropAnimNameTextBox.Text = string.Empty;
-            FramesListBox.Items.Clear();
-            PropAnimSpeedTextBox.Text = string.Empty;
-            PropAnimLoopCheckBox.IsChecked = false;
-            PropAnimAutoplayCheckBox.IsChecked = false;
-            SelectedAnimationPropsGroup.Visibility = Visibility.Collapsed;
-        }
-
-        private void AnimationsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (_isUpdatingPropertiesPanel) return;
-
-            if (AnimationsListBox.SelectedItem is ListBoxItem item && item.Tag is AnimationModel anim)
-            {
-                _selectedAnimation = anim;
-                PropAnimNameTextBox.Text = anim.Name;
-                PropAnimSpeedTextBox.Text = anim.Speed.ToString(CultureInfo.InvariantCulture);
-                PropAnimLoopCheckBox.IsChecked = anim.Loop;
-                PropAnimAutoplayCheckBox.IsChecked = anim.Autoplay;
-
-                RefreshFramesList();
-
-                SelectedAnimationPropsGroup.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                ClearSelectedAnimationProps();
-            }
-        }
-
-        private void RefreshFramesList()
-        {
-            FramesListBox.Items.Clear();
-            if (_selectedAnimation == null) return;
-
-            for (int i = 0; i < _selectedAnimation.Frames.Count; i++)
-            {
-                FramesListBox.Items.Add(new ListBoxItem
-                {
-                    Content = $"[{i}] {_selectedAnimation.Frames[i]}",
-                    Tag = i
-                });
-            }
-
-            SelectedFrameEditorGrid.Visibility =
-                _selectedAnimation.Frames.Count > 0
-                    ? Visibility.Visible
-                    : Visibility.Collapsed;
-        }
-
-        private void AddFrameButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selectedAnimation == null) return;
-
-            _selectedAnimation.Frames.Add("path/to/frame.png");
-            RefreshFramesList();
-        }
-
-        private void RemoveFrameButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selectedAnimation == null) return;
-            if (FramesListBox.SelectedItem is not ListBoxItem item) return;
-
-            var index = (int)item.Tag;
-            _selectedAnimation.Frames.RemoveAt(index);
-            RefreshFramesList();
-        }
-
-        private void FramesListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (FramesListBox.SelectedItem is ListBoxItem item && item.Tag is int index)
-            {
-                if (index >= 0 && index < _selectedAnimation?.Frames.Count)
-                {
-                    PropFrameValueTextBox.Text = _selectedAnimation.Frames[index];
-                }
-            }
-        }
-
-        private void FrameValueTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (_selectedAnimation == null) return;
-            if (FramesListBox.SelectedItem is not ListBoxItem item) return;
-
-            var index = (int)item.Tag;
-            if (index >= 0 && index < _selectedAnimation.Frames.Count)
-            {
-                _selectedAnimation.Frames[index] = PropFrameValueTextBox.Text.Trim();
-                RefreshFramesList();
-                // Restore selection
-                if (index < FramesListBox.Items.Count)
-                    FramesListBox.SelectedIndex = index;
-            }
-        }
-
-        private void AddAnimationButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selected is not AnimatedSpriteElement ase) return;
-
-            var newAnim = new AnimationModel
-            {
-                Name = "Animation" + (ase.Animations.Count + 1),
-                Frames = new List<string> { "0", "1", "2", "3" },
-                Speed = 0.1,
-                Loop = true,
-                Autoplay = ase.Animations.Count == 0 // First animation autoplays by default
-            };
-
-            ase.Animations.Add(newAnim);
-            RefreshAnimationsList(ase);
-            AnimationsListBox.SelectedIndex = ase.Animations.Count - 1;
-            StatusTextBlock.Text = $"Animation '{newAnim.Name}' added";
-        }
-
-        private void RemoveAnimationButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_selected is not AnimatedSpriteElement ase) return;
-            if (_selectedAnimation == null) return;
-
-            var name = _selectedAnimation.Name;
-            ase.Animations.Remove(_selectedAnimation);
-            RefreshAnimationsList(ase);
-            StatusTextBlock.Text = $"Animation '{name}' removed";
-        }
-
-        private void AnimationPropTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            if (_isUpdatingPropertiesPanel) return;
-            ApplySelectedAnimationProps();
-        }
-
-        private void AnimationPropCheckBox_Changed(object sender, RoutedEventArgs e)
-        {
-            if (_isUpdatingPropertiesPanel) return;
-            ApplySelectedAnimationProps();
-        }
-
-        private void ApplySelectedAnimationProps()
-        {
-            if (_selectedAnimation == null) return;
-            if (_selected is not AnimatedSpriteElement ase) return;
-
-            var oldName = _selectedAnimation.Name;
-            _selectedAnimation.Name = PropAnimNameTextBox.Text;
-            // Frames are now handled directly via the list
-            _selectedAnimation.Speed = ParseDoubleSafe(PropAnimSpeedTextBox.Text);
-            _selectedAnimation.Loop = PropAnimLoopCheckBox.IsChecked == true;
-            _selectedAnimation.Autoplay = PropAnimAutoplayCheckBox.IsChecked == true;
-
-            // Update the list item display if name changed
-            if (!string.Equals(oldName, _selectedAnimation.Name, StringComparison.Ordinal))
-            {
-                var selectedIndex = AnimationsListBox.SelectedIndex;
-                RefreshAnimationsList(ase);
-                if (selectedIndex >= 0 && selectedIndex < AnimationsListBox.Items.Count)
-                    AnimationsListBox.SelectedIndex = selectedIndex;
             }
         }
 
@@ -1971,9 +1841,28 @@ namespace FluxionJsSceneEditor
             _selected.Active = PropActiveCheckBox.IsChecked == true;
             _selected.X = ParseDoubleSafe(PropXTextBox.Text);
             _selected.Y = ParseDoubleSafe(PropYTextBox.Text);
-            _selected.Width = ParseDoubleSafe(PropWidthTextBox.Text);
-            _selected.Height = ParseDoubleSafe(PropHeightTextBox.Text);
+
+            if (_selected is ClickableElement ce)
+            {
+                var wText = PropWidthTextBox.Text?.Trim();
+                var hText = PropHeightTextBox.Text?.Trim();
+
+                // Empty means inherit from parent (engine behavior).
+                ce.OptionalWidth = string.IsNullOrWhiteSpace(wText) ? null : ParseDoubleSafe(wText);
+                ce.OptionalHeight = string.IsNullOrWhiteSpace(hText) ? null : ParseDoubleSafe(hText);
+
+                // Keep BaseElement.Width/Height as a fallback for legacy scenes / editor visuals.
+                ce.Width = ce.OptionalWidth ?? ce.Width;
+                ce.Height = ce.OptionalHeight ?? ce.Height;
+            }
+            else
+            {
+                _selected.Width = ParseDoubleSafe(PropWidthTextBox.Text);
+                _selected.Height = ParseDoubleSafe(PropHeightTextBox.Text);
+            }
+
             _selected.Layer = (int)ParseDoubleSafe(PropLayerTextBox.Text);
+            _selected.Opacity = Math.Clamp((int)ParseDoubleSafe(PropOpacityTextBox.Text), 0, 255);
 
             // Calculate the delta for moving child elements
             var deltaX = _selected.X - oldX;
@@ -2000,8 +1889,18 @@ namespace FluxionJsSceneEditor
                     {
                         clickable.X += deltaX;
                         clickable.Y += deltaY;
-                        clickable.Width += deltaW;
-                        clickable.Height += deltaH;
+
+                        // Only sync clickable size when it is explicitly sized.
+                        if (clickable.OptionalWidth.HasValue)
+                            clickable.OptionalWidth += deltaW;
+                        else
+                            clickable.Width += deltaW;
+
+                        if (clickable.OptionalHeight.HasValue)
+                            clickable.OptionalHeight += deltaH;
+                        else
+                            clickable.Height += deltaH;
+
                         clickable.Layer = _selected.Layer;
 
                         // Update ParentName if the parent was renamed
@@ -2039,8 +1938,8 @@ namespace FluxionJsSceneEditor
                 ae.Autoplay = PropAudioAutoplayCheckBox.IsChecked == true;
             }
 
-            if (_selected is ClickableElement ce)
-                ce.HasClickableArea = PropHasClickableCheckBox.IsChecked == true;
+            if (_selected is ClickableElement ceSel2)
+                ceSel2.HasClickableArea = PropHasClickableCheckBox.IsChecked == true;
 
             RefreshHierarchy();
             RefreshCanvas();
@@ -2070,114 +1969,10 @@ namespace FluxionJsSceneEditor
         private static Uri ToUri(string pathOrUri)
             => Uri.TryCreate(pathOrUri, UriKind.Absolute, out var abs) ? abs : new Uri(pathOrUri, UriKind.Relative);
 
-        // ---- XAML event handler forwarders (must be inside MainWindow class) ----
-        private void NewSceneButton_Click(object sender, RoutedEventArgs e) => NewScene();
-        private void AddElementButton_Click(object sender, RoutedEventArgs e)
+        private static double ParseDoubleSafe(string? s)
         {
-            // Open the context menu dropdown
-            if (AddElementButton.ContextMenu != null)
-            {
-                AddElementButton.ContextMenu.PlacementTarget = AddElementButton;
-                AddElementButton.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
-                AddElementButton.ContextMenu.IsOpen = true;
-            }
-        }
-        private void AddSpriteMenuItem_Click(object sender, RoutedEventArgs e) => AddSprite();
-        private void AddAnimatedSpriteMenuItem_Click(object sender, RoutedEventArgs e) => AddAnimatedSprite();
-        private void AddTextMenuItem_Click(object sender, RoutedEventArgs e) => AddText();
-        private void AddAudioMenuItem_Click(object sender, RoutedEventArgs e) => AddAudio();
-        private void AddClickableMenuItem_Click(object sender, RoutedEventArgs e) => AddClickable();
-        private void HierarchyTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) => OnHierarchySelected();
-        private void StartEngineButton_Click(object sender, RoutedEventArgs e) => StartEngine();
-
-        private void AddSprite()
-        {
-            var sp = new SpriteElement { Name = "Sprite" + (_scene.Elements.Count + 1), X = 0, Y = 0, Width = 100, Height = 100, ImageSrc = "" };
-            _scene.Elements.Add(sp);
-            RefreshHierarchy();
-            RefreshCanvas();
-            StatusTextBlock.Text = "Sprite added";
-        }
-
-        private void AddText()
-        {
-            var text = new TextElement
-            {
-                Name = "Text" + (_scene.Elements.Count + 1),
-                X = 24,
-                Y = 24,
-                Text = "New Text",
-                FontSize = 24,
-                FontFamily = "Arial",
-                Color = "#ffffff"
-            };
-            _scene.Elements.Add(text);
-            RefreshHierarchy();
-            RefreshCanvas();
-            StatusTextBlock.Text = "Text added";
-        }
-
-        private void AddAnimatedSprite()
-        {
-            var animSprite = new AnimatedSpriteElement
-            {
-                Name = "AnimSprite" + (_scene.Elements.Count + 1),
-                X = 0,
-                Y = 0,
-                Width = 64,
-                Height = 64,
-                FrameWidth = 32,
-                FrameHeight = 32,
-                ImageSrc = ""
-            };
-
-            // Add a default animation
-            animSprite.Animations.Add(new AnimationModel
-            {
-                Name = "Idle",
-                Frames = new List<string> { "0", "1", "2", "3" },
-                Speed = 0.1,
-                Loop = true,
-                Autoplay = true
-            });
-
-            _scene.Elements.Add(animSprite);
-            RefreshHierarchy();
-            RefreshCanvas();
-            StatusTextBlock.Text = "Animated Sprite added";
-        }
-
-        private void AddAudio()
-        {
-            var audio = new AudioElement { Name = "Audio" + (_scene.Elements.Count + 1), Src = "", Loop = false, Autoplay = false };
-            _scene.Elements.Add(audio);
-            RefreshHierarchy();
-            RefreshCanvas();
-            StatusTextBlock.Text = "Audio added";
-        }
-
-        private void AddClickable()
-        {
-            var click = new ClickableElement { Name = "Clickable" + (_scene.Elements.Count + 1), X = 0, Y = 0, Width = 200, Height = 200, HasClickableArea = true };
-
-            // If a parent element is selected (Sprite or other non-clickable), make the new clickable its child
-            if (_selected != null && _selected is not ClickableElement && _selected is not AudioElement)
-            {
-                click.ParentName = _selected.Name;
-                click.X = _selected.X;
-                click.Y = _selected.Y;
-                click.Width = _selected.Width;
-                click.Height = _selected.Height;
-                click.Layer = _selected.Layer;
-                click.Name = _selected.Name + "Hitbox";
-            }
-
-            _scene.Elements.Add(click);
-            RefreshHierarchy();
-            RefreshCanvas();
-            StatusTextBlock.Text = _selected != null && click.ParentName != null
-                ? $"Clickable added as child of {click.ParentName}"
-                : "Clickable added";
+            if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v)) return v;
+            return 0;
         }
 
         private void OnHierarchySelected()
@@ -2199,7 +1994,6 @@ namespace FluxionJsSceneEditor
             _selected = null;
             SetPropertiesPanelVisibility(null);
 
-            // Initialize editor view from scene camera
             _viewCamX = _scene.Camera.X;
             _viewCamY = _scene.Camera.Y;
             _viewCamZoom = _scene.Camera.Zoom;
@@ -2219,7 +2013,6 @@ namespace FluxionJsSceneEditor
             };
             SceneNameTextBox.Text = _scene.Name;
 
-            // Initialize editor view from scene camera
             _viewCamX = _scene.Camera.X;
             _viewCamY = _scene.Camera.Y;
             _viewCamZoom = _scene.Camera.Zoom;
@@ -2239,47 +2032,33 @@ namespace FluxionJsSceneEditor
             sceneNode.Items.Add(cameraNode);
             var elementsRoot = new TreeViewItem { Header = "Elements", IsExpanded = true };
 
-            // Build a map of parent elements by name for child lookup
             var elementNodesByName = new Dictionary<string, TreeViewItem>(StringComparer.OrdinalIgnoreCase);
 
-            // First pass: create nodes for all non-child elements (elements without ParentName)
             foreach (var el in _scene.Elements)
             {
                 if (el is ClickableElement ce && !string.IsNullOrWhiteSpace(ce.ParentName))
-                    continue; // Skip child elements in first pass
+                    continue;
 
                 var node = new TreeViewItem { Header = el.DisplayName, Tag = el, IsExpanded = true };
                 elementsRoot.Items.Add(node);
                 elementNodesByName[el.Name] = node;
             }
 
-            // Second pass: add child elements under their parents
             foreach (var el in _scene.Elements)
             {
                 if (el is ClickableElement ce && !string.IsNullOrWhiteSpace(ce.ParentName))
                 {
                     var node = new TreeViewItem { Header = el.DisplayName, Tag = el };
                     if (elementNodesByName.TryGetValue(ce.ParentName, out var parentNode))
-                    {
                         parentNode.Items.Add(node);
-                    }
                     else
-                    {
-                        // Parent not found, add to root
                         elementsRoot.Items.Add(node);
-                    }
                 }
             }
 
             sceneNode.Items.Add(elementsRoot);
             HierarchyTreeView.Items.Add(sceneNode);
             sceneNode.IsExpanded = true;
-        }
-
-        private static double ParseDoubleSafe(string? s)
-        {
-            if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v)) return v;
-            return 0;
         }
 
         private void OpenProjectFolderButton_Click(object sender, RoutedEventArgs e)
@@ -2334,90 +2113,420 @@ namespace FluxionJsSceneEditor
             ShowEngineInfo();
         }
 
-        private string? ResolveEnginePath(string relativePath)
+        private void PropTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(relativePath))
-                return relativePath;
-
-            if (string.IsNullOrWhiteSpace(_engineFolderPath))
-                return null;
-
-            return System.IO.Path.GetFullPath(System.IO.Path.Combine(_engineFolderPath, relativePath));
+            if (_isUpdatingPropertiesPanel) return;
+            ApplyPropertiesFromPanel();
         }
 
-        private async void StartEngine()
+        private void PropCheckBox_Changed(object sender, RoutedEventArgs e)
         {
+            if (_isUpdatingPropertiesPanel) return;
+            ApplyPropertiesFromPanel();
+        }
+
+        // ---- XAML event handler forwarders ----
+        private void NewSceneButton_Click(object sender, RoutedEventArgs e) => NewScene();
+
+        private void StartEngineButton_Click(object sender, RoutedEventArgs e) => StartEngine();
+
+        private void AddElementButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (AddElementButton.ContextMenu != null)
+            {
+                AddElementButton.ContextMenu.PlacementTarget = AddElementButton;
+                AddElementButton.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                AddElementButton.ContextMenu.IsOpen = true;
+            }
+        }
+
+        private void AddSpriteMenuItem_Click(object sender, RoutedEventArgs e) => AddSprite();
+        private void AddAnimatedSpriteMenuItem_Click(object sender, RoutedEventArgs e) => AddAnimatedSprite();
+        private void AddTextMenuItem_Click(object sender, RoutedEventArgs e) => AddText();
+        private void AddAudioMenuItem_Click(object sender, RoutedEventArgs e) => AddAudio();
+        private void AddClickableMenuItem_Click(object sender, RoutedEventArgs e) => AddClickable();
+
+        private void HierarchyTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) => OnHierarchySelected();
+
+        // ---- Animation panel handlers (used by AnimatedSpritePropsGroup) ----
+        private AnimationModel? _selectedAnimation;
+
+        private void AnimationsListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isUpdatingPropertiesPanel) return;
+            if (_selected is not AnimatedSpriteElement ase) return;
+
+            if (AnimationsListBox.SelectedItem is ListBoxItem item && item.Tag is AnimationModel anim)
+            {
+                _selectedAnimation = anim;
+                PropAnimNameTextBox.Text = anim.Name;
+                PropAnimSpeedTextBox.Text = anim.Speed.ToString(CultureInfo.InvariantCulture);
+                PropAnimLoopCheckBox.IsChecked = anim.Loop;
+                PropAnimAutoplayCheckBox.IsChecked = anim.Autoplay;
+
+                RefreshFramesList();
+                SelectedAnimationPropsGroup.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                ClearSelectedAnimationProps();
+            }
+        }
+
+        private void AddAnimationButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selected is not AnimatedSpriteElement ase) return;
+
+            var newAnim = new AnimationModel
+            {
+                Name = "Animation" + (ase.Animations.Count + 1),
+                Frames = new List<string> { "0", "1", "2", "3" },
+                Speed = 0.1,
+                Loop = true,
+                Autoplay = ase.Animations.Count == 0
+            };
+
+            ase.Animations.Add(newAnim);
+            RefreshAnimationsList(ase);
+            AnimationsListBox.SelectedIndex = ase.Animations.Count - 1;
+            StatusTextBlock.Text = $"Animation '{newAnim.Name}' added";
+        }
+
+        private void RemoveAnimationButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selected is not AnimatedSpriteElement ase) return;
+            if (_selectedAnimation == null) return;
+
+            var name = _selectedAnimation.Name;
+            ase.Animations.Remove(_selectedAnimation);
+            RefreshAnimationsList(ase);
+            StatusTextBlock.Text = $"Animation '{name}' removed";
+        }
+
+        private void AddFrameButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedAnimation == null) return;
+
+            _selectedAnimation.Frames.Add("path/to/frame.png");
+            RefreshFramesList();
+        }
+
+        private void RemoveFrameButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedAnimation == null) return;
+            if (FramesListBox.SelectedItem is not ListBoxItem item) return;
+
+            var index = (int)item.Tag;
+            if (index >= 0 && index < _selectedAnimation.Frames.Count)
+                _selectedAnimation.Frames.RemoveAt(index);
+
+            RefreshFramesList();
+        }
+
+        private void FramesListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_selectedAnimation == null) return;
+
+            if (FramesListBox.SelectedItem is ListBoxItem item && item.Tag is int index)
+            {
+                if (index >= 0 && index < _selectedAnimation.Frames.Count)
+                    PropFrameValueTextBox.Text = _selectedAnimation.Frames[index];
+            }
+        }
+
+        private void FrameValueTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (_selectedAnimation == null) return;
+            if (FramesListBox.SelectedItem is not ListBoxItem item) return;
+
+            var index = (int)item.Tag;
+            if (index >= 0 && index < _selectedAnimation.Frames.Count)
+            {
+                _selectedAnimation.Frames[index] = PropFrameValueTextBox.Text.Trim();
+                RefreshFramesList();
+                if (index < FramesListBox.Items.Count)
+                    FramesListBox.SelectedIndex = index;
+            }
+        }
+
+        private void AnimationPropTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (_isUpdatingPropertiesPanel) return;
+            ApplySelectedAnimationProps();
+        }
+
+        private void AnimationPropCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_isUpdatingPropertiesPanel) return;
+            ApplySelectedAnimationProps();
+        }
+
+        private void ApplySelectedAnimationProps()
+        {
+            if (_selectedAnimation == null) return;
+            if (_selected is not AnimatedSpriteElement ase) return;
+
+            var oldName = _selectedAnimation.Name;
+            _selectedAnimation.Name = PropAnimNameTextBox.Text;
+            _selectedAnimation.Speed = ParseDoubleSafe(PropAnimSpeedTextBox.Text);
+            _selectedAnimation.Loop = PropAnimLoopCheckBox.IsChecked == true;
+            _selectedAnimation.Autoplay = PropAnimAutoplayCheckBox.IsChecked == true;
+
+            if (!string.Equals(oldName, _selectedAnimation.Name, StringComparison.Ordinal))
+            {
+                var selectedIndex = AnimationsListBox.SelectedIndex;
+                RefreshAnimationsList(ase);
+                if (selectedIndex >= 0 && selectedIndex < AnimationsListBox.Items.Count)
+                    AnimationsListBox.SelectedIndex = selectedIndex;
+            }
+        }
+
+        private void RefreshAnimationsList(AnimatedSpriteElement ase)
+        {
+            AnimationsListBox.Items.Clear();
+            foreach (var anim in ase.Animations)
+                AnimationsListBox.Items.Add(new ListBoxItem { Content = anim.Name, Tag = anim });
+
+            if (ase.Animations.Count > 0)
+                AnimationsListBox.SelectedIndex = 0;
+            else
+                ClearSelectedAnimationProps();
+
+            SelectedAnimationPropsGroup.Visibility = ase.Animations.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void RefreshFramesList()
+        {
+            FramesListBox.Items.Clear();
+            if (_selectedAnimation == null) return;
+
+            for (var i = 0; i < _selectedAnimation.Frames.Count; i++)
+            {
+                FramesListBox.Items.Add(new ListBoxItem
+                {
+                    Content = $"[{i}] {_selectedAnimation.Frames[i]}",
+                    Tag = i
+                });
+            }
+
+            SelectedFrameEditorGrid.Visibility = _selectedAnimation.Frames.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void ClearSelectedAnimationProps()
+        {
+            _selectedAnimation = null;
+            PropAnimNameTextBox.Text = string.Empty;
+            FramesListBox.Items.Clear();
+            PropAnimSpeedTextBox.Text = string.Empty;
+            PropAnimLoopCheckBox.IsChecked = false;
+            PropAnimAutoplayCheckBox.IsChecked = false;
+            SelectedAnimationPropsGroup.Visibility = Visibility.Collapsed;
+            SelectedFrameEditorGrid.Visibility = Visibility.Collapsed;
+        }
+
+        // Methods expected elsewhere in the editor
+        private void StartEngine()
+        {
+            // Minimal implementation: guard against missing config.
             if (_isStartingEngine)
                 return;
 
-            if (string.IsNullOrWhiteSpace(_engineFolderPath) || !Directory.Exists(_engineFolderPath))
+            if (string.IsNullOrWhiteSpace(_engineFolderPath) || _engineInfo == null)
             {
-                System.Windows.MessageBox.Show(this, "Select a valid engine folder first.", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show(this, "Select a valid engine folder first.", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            if (_engineInfo == null)
+            if (string.IsNullOrWhiteSpace(_projectFolderPath) || !Directory.Exists(_projectFolderPath))
             {
-                System.Windows.MessageBox.Show(this, "Engine folder is not validated. Select it again.", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show(this, "Select a project folder first.", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            var versionDir = System.IO.Path.GetDirectoryName(_engineInfo.VersionFilePath);
-            var npmStartDir = string.IsNullOrWhiteSpace(versionDir) ? null : System.IO.Path.GetDirectoryName(versionDir);
-            if (string.IsNullOrWhiteSpace(npmStartDir) || !Directory.Exists(npmStartDir))
+            StatusTextBlock.Text = "Engine start is not wired yet.";
+        }
+
+        private static string MakeUniqueName(IEnumerable<BaseElement> elements, string baseName)
+        {
+            var existing = new HashSet<string>(elements.Select(e => e.Name), StringComparer.OrdinalIgnoreCase);
+            if (!existing.Contains(baseName))
+                return baseName;
+
+            for (var i = 2; i < 10_000; i++)
             {
-                System.Windows.MessageBox.Show(this, "Cannot determine npm start directory (expected one level above version.py).", "Start Engine", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+                var candidate = baseName + i.ToString(CultureInfo.InvariantCulture);
+                if (!existing.Contains(candidate))
+                    return candidate;
             }
 
-            _isStartingEngine = true;
-            if (StartEngineButton != null)
-                StartEngineButton.IsEnabled = false;
+            return baseName + Guid.NewGuid().ToString("N");
+        }
 
-            try
+        private (double x, double y) GetDefaultAddPosition()
+        {
+            // Add at current view center in world coordinates.
+            var center = new System.Windows.Point(GizmoCanvas.ActualWidth / 2.0, GizmoCanvas.ActualHeight / 2.0);
+            var world = SceneToWorldPoint(center);
+            return (world.X, world.Y);
+        }
+
+        private void AddSprite()
+        {
+            var (x, y) = GetDefaultAddPosition();
+            var el = new SpriteElement
             {
-                StatusTextBlock.Text = "Running npm install...";
-                var sb = new System.Text.StringBuilder();
+                Name = MakeUniqueName(_scene.Elements, "Sprite"),
+                X = x,
+                Y = y,
+                Width = 128,
+                Height = 128,
+                Layer = 0,
+                Opacity = 255,
+                Active = true,
+                ImageSrc = string.Empty
+            };
 
-                void Log(string line)
+            _scene.Elements.Add(el);
+            SelectElement(el);
+            RefreshHierarchy();
+            RefreshCanvas();
+            StatusTextBlock.Text = "Sprite added";
+        }
+
+        private void AddAnimatedSprite()
+        {
+            var (x, y) = GetDefaultAddPosition();
+            var el = new AnimatedSpriteElement
+            {
+                Name = MakeUniqueName(_scene.Elements, "AnimatedSprite"),
+                X = x,
+                Y = y,
+                Width = 128,
+                Height = 128,
+                Layer = 0,
+                Opacity = 255,
+                Active = true,
+                ImageSrc = string.Empty,
+                FrameWidth = 32,
+                FrameHeight = 32,
+                Animations = new List<AnimationModel>
                 {
-                    sb.AppendLine(line);
+                    new AnimationModel
+                    {
+                        Name = "Base",
+                        Frames = new List<string> { "0" },
+                        Speed = 10,
+                        Loop = true,
+                        Autoplay = true
+                    }
                 }
+            };
 
-                var installExit = await RunProcessAsync("cmd.exe", "/c npm install", _engineFolderPath, Log);
-                if (installExit != 0)
-                {
-                    System.Windows.MessageBox.Show(this, sb.ToString(), $"npm install failed (exit {installExit})", MessageBoxButton.OK, MessageBoxImage.Error);
-                    StatusTextBlock.Text = "npm install failed";
-                    return;
-                }
+            _scene.Elements.Add(el);
+            SelectElement(el);
+            RefreshHierarchy();
+            RefreshCanvas();
+            StatusTextBlock.Text = "AnimatedSprite added";
+        }
 
-                StatusTextBlock.Text = "Starting engine (npm start)...";
-                // Start npm start in a visible terminal window so the user can see logs; don't block the editor.
-                var startPsi = new System.Diagnostics.ProcessStartInfo
+        private void AddText()
+        {
+            var (x, y) = GetDefaultAddPosition();
+            var el = new TextElement
+            {
+                Name = MakeUniqueName(_scene.Elements, "Text"),
+                X = x,
+                Y = y,
+                Layer = 0,
+                Opacity = 255,
+                Active = true,
+                Text = "Text",
+                FontSize = 32,
+                FontFamily = "Consolas",
+                Color = "#ffffff",
+                Width = 0,
+                Height = 0
+            };
+
+            _scene.Elements.Add(el);
+            SelectElement(el);
+            RefreshHierarchy();
+            RefreshCanvas();
+            StatusTextBlock.Text = "Text added";
+        }
+
+        private void AddAudio()
+        {
+            var el = new AudioElement
+            {
+                Name = MakeUniqueName(_scene.Elements, "Audio"),
+                Src = string.Empty,
+                Loop = false,
+                Autoplay = false,
+                Layer = 0,
+                Opacity = 255,
+                Active = true
+            };
+
+            _scene.Elements.Add(el);
+            SelectElement(el);
+            RefreshHierarchy();
+            RefreshCanvas();
+            StatusTextBlock.Text = "Audio added";
+        }
+
+        private void AddClickable()
+        {
+            // If a non-audio element is selected, create an inheriting ClickableArea tied to it.
+            if (_selected is BaseElement parent && parent is not AudioElement && parent is not ClickableElement)
+            {
+                var el = new ClickableElement
                 {
-                    FileName = "cmd.exe",
-                    Arguments = "/k npm start",
-                    WorkingDirectory = npmStartDir,
-                    UseShellExecute = true
+                    Name = MakeUniqueName(_scene.Elements, parent.Name + "Hitbox"),
+                    X = parent.X,
+                    Y = parent.Y,
+                    Width = parent.Width,
+                    Height = parent.Height,
+                    OptionalWidth = null,
+                    OptionalHeight = null,
+                    HasClickableArea = true,
+                    Layer = parent.Layer,
+                    Opacity = 255,
+                    Active = true,
+                    ParentName = parent.Name
                 };
 
-                System.Diagnostics.Process.Start(startPsi);
-                StatusTextBlock.Text = "Engine started";
+                _scene.Elements.Add(el);
+                SelectElement(el);
+                RefreshHierarchy();
+                RefreshCanvas();
+                StatusTextBlock.Text = "ClickableArea added";
+                return;
             }
-            catch (Exception ex)
+
+            // Otherwise add a standalone clickable.
+            var (x, y) = GetDefaultAddPosition();
+            var standalone = new ClickableElement
             {
-                System.Windows.MessageBox.Show(this, ex.Message, "Start Engine Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                StatusTextBlock.Text = "Failed to start engine";
-            }
-            finally
-            {
-                _isStartingEngine = false;
-                if (StartEngineButton != null)
-                    StartEngineButton.IsEnabled = true;
-            }
+                Name = MakeUniqueName(_scene.Elements, "Clickable"),
+                X = x,
+                Y = y,
+                Width = 128,
+                Height = 64,
+                OptionalWidth = 128,
+                OptionalHeight = 64,
+                HasClickableArea = true,
+                Layer = 0,
+                Opacity = 255,
+                Active = true,
+                ParentName = null
+            };
+
+            _scene.Elements.Add(standalone);
+            SelectElement(standalone);
+            RefreshHierarchy();
+            RefreshCanvas();
+            StatusTextBlock.Text = "Clickable added";
         }
     }
-
-
 }
