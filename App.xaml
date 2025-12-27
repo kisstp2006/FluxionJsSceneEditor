@@ -242,37 +242,182 @@
                             </Setter>
                         </Style>
 
-                        <!-- ListBoxItem dark theme style -->
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="Foreground" Value="{DynamicResource App.ControlForegroundBrush}" />
-                            <Setter Property="Padding" Value="6,3" />
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="Border"
-                                                Background="{TemplateBinding Background}"
-                                                BorderThickness="0"
-                                                Padding="{TemplateBinding Padding}"
-                                                SnapsToDevicePixels="True">
-                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.SurfaceBrush}" />
-                                            </Trigger>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.AccentBrush}" />
-                                                <Setter Property="Foreground" Value="{DynamicResource App.SelectionTextBrush}" />
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
+                                    <!-- ListBoxItem dark theme style -->
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="Foreground" Value="{DynamicResource App.ControlForegroundBrush}" />
+                                        <Setter Property="Padding" Value="6,3" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="Border"
+                                                            Background="{TemplateBinding Background}"
+                                                            BorderThickness="0"
+                                                            Padding="{TemplateBinding Padding}"
+                                                            SnapsToDevicePixels="True">
+                                                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.SurfaceBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.AccentBrush}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource App.SelectionTextBrush}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
 
-                    </ResourceDictionary>
-                </Application.Resources>
-            </Application>
+                                    <!-- ComboBoxItem dark theme style -->
+                                    <Style TargetType="ComboBoxItem">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="Foreground" Value="{DynamicResource App.ControlForegroundBrush}" />
+                                        <Setter Property="Padding" Value="6,3" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ComboBoxItem">
+                                                    <Border x:Name="Border"
+                                                            Background="{TemplateBinding Background}"
+                                                            BorderThickness="0"
+                                                            Padding="{TemplateBinding Padding}"
+                                                            SnapsToDevicePixels="True">
+                                                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.SurfaceBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.AccentBrush}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource App.SelectionTextBrush}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+
+                                    <!-- Slider Repeat Button Style (must be defined before Slider style that references it) -->
+                                    <Style x:Key="SliderButtonStyle" TargetType="RepeatButton">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="RepeatButton">
+                                                    <Border Background="{TemplateBinding Background}" />
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+
+                                    <!-- Slider Thumb Style -->
+                                    <Style x:Key="SliderThumbStyle" TargetType="Thumb">
+                                        <Setter Property="Background" Value="{DynamicResource App.AccentBrush}" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource App.ControlBorderBrush}" />
+                                        <Setter Property="BorderThickness" Value="1" />
+                                        <Setter Property="Height" Value="16" />
+                                        <Setter Property="Width" Value="16" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Thumb">
+                                                    <Ellipse Fill="{TemplateBinding Background}"
+                                                             Stroke="{TemplateBinding BorderBrush}"
+                                                             StrokeThickness="{TemplateBinding BorderThickness}" />
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+
+                                    <!-- Slider dark theme style -->
+                                    <Style TargetType="Slider">
+                                        <Setter Property="Background" Value="{DynamicResource App.ControlBackgroundBrush}" />
+                                        <Setter Property="Foreground" Value="{DynamicResource App.AccentBrush}" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource App.ControlBorderBrush}" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Slider">
+                                                    <Grid>
+                                                        <Grid.RowDefinitions>
+                                                            <RowDefinition Height="Auto" />
+                                                            <RowDefinition Height="Auto" MinHeight="{TemplateBinding MinHeight}" />
+                                                            <RowDefinition Height="Auto" />
+                                                        </Grid.RowDefinitions>
+                                                        <Border x:Name="TrackBackground"
+                                                                Grid.Row="1"
+                                                                Height="4"
+                                                                Background="{TemplateBinding Background}"
+                                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="2"
+                                                                VerticalAlignment="Center">
+                                                            <Canvas>
+                                                                <Rectangle x:Name="PART_SelectionRange"
+                                                                           Height="4"
+                                                                           Fill="{TemplateBinding Foreground}"
+                                                                           Visibility="Hidden" />
+                                                            </Canvas>
+                                                        </Border>
+                                                        <Track x:Name="PART_Track" Grid.Row="1">
+                                                            <Track.DecreaseRepeatButton>
+                                                                <RepeatButton Command="Slider.DecreaseLarge" Style="{StaticResource SliderButtonStyle}" />
+                                                            </Track.DecreaseRepeatButton>
+                                                            <Track.Thumb>
+                                                                <Thumb Style="{StaticResource SliderThumbStyle}" />
+                                                            </Track.Thumb>
+                                                            <Track.IncreaseRepeatButton>
+                                                                <RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource SliderButtonStyle}" />
+                                                            </Track.IncreaseRepeatButton>
+                                                        </Track>
+                                                    </Grid>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+
+                                    <!-- ScrollBar dark theme style -->
+                                    <Style TargetType="ScrollBar">
+                                        <Setter Property="Background" Value="{DynamicResource App.ControlBackgroundBrush}" />
+                                        <Setter Property="Foreground" Value="{DynamicResource App.ControlBorderBrush}" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ScrollBar">
+                                                    <Grid x:Name="GridRoot" Background="{TemplateBinding Background}">
+                                                        <Track x:Name="PART_Track" IsDirectionReversed="True" Focusable="False">
+                                                            <Track.Thumb>
+                                                                <Thumb x:Name="Thumb" Background="{DynamicResource App.ControlBorderBrush}">
+                                                                    <Thumb.Template>
+                                                                        <ControlTemplate TargetType="Thumb">
+                                                                            <Border Background="{TemplateBinding Background}"
+                                                                                    CornerRadius="3"
+                                                                                    Margin="2" />
+                                                                        </ControlTemplate>
+                                                                    </Thumb.Template>
+                                                                </Thumb>
+                                                            </Track.Thumb>
+                                                            <Track.IncreaseRepeatButton>
+                                                                <RepeatButton Opacity="0" Command="ScrollBar.PageDownCommand" />
+                                                            </Track.IncreaseRepeatButton>
+                                                            <Track.DecreaseRepeatButton>
+                                                                <RepeatButton Opacity="0" Command="ScrollBar.PageUpCommand" />
+                                                            </Track.DecreaseRepeatButton>
+                                                        </Track>
+                                                    </Grid>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="Orientation" Value="Horizontal">
+                                                            <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+
+                                </ResourceDictionary>
+                            </Application.Resources>
+                        </Application>
