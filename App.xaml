@@ -186,38 +186,93 @@
                 </Setter>
             </Style>
 
-            <!-- MenuItem dark theme style -->
-            <Style TargetType="MenuItem">
-                <Setter Property="Background" Value="Transparent" />
-                <Setter Property="Foreground" Value="{DynamicResource App.TextBrush}" />
-                <Setter Property="Padding" Value="8,6" />
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="MenuItem">
-                            <Border x:Name="Border"
-                                    Background="{TemplateBinding Background}"
-                                    BorderThickness="0"
-                                    CornerRadius="3"
-                                    Padding="{TemplateBinding Padding}"
-                                    SnapsToDevicePixels="True">
-                                <ContentPresenter ContentSource="Header" 
-                                                  HorizontalAlignment="Left"
-                                                  VerticalAlignment="Center" />
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsHighlighted" Value="True">
-                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.SurfaceBrush}" />
-                                </Trigger>
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.AccentBrush}" />
-                                    <Setter Property="Foreground" Value="{DynamicResource App.SelectionTextBrush}" />
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
+                        <!-- MenuItem dark theme style -->
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="Foreground" Value="{DynamicResource App.TextBrush}" />
+                            <Setter Property="Padding" Value="8,6" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="MenuItem">
+                                        <Border x:Name="Border"
+                                                Background="{TemplateBinding Background}"
+                                                BorderThickness="0"
+                                                CornerRadius="3"
+                                                Padding="{TemplateBinding Padding}"
+                                                SnapsToDevicePixels="True">
+                                            <ContentPresenter ContentSource="Header" 
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsHighlighted" Value="True">
+                                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.SurfaceBrush}" />
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.AccentBrush}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource App.SelectionTextBrush}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
 
-        </ResourceDictionary>
-    </Application.Resources>
-</Application>
+                        <!-- ListBox dark theme style -->
+                        <Style TargetType="ListBox">
+                            <Setter Property="Background" Value="{DynamicResource App.ControlBackgroundBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource App.ControlForegroundBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource App.ControlBorderBrush}" />
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+                            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBox">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                SnapsToDevicePixels="True">
+                                            <ScrollViewer Padding="{TemplateBinding Padding}" Focusable="False">
+                                                <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                            </ScrollViewer>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+
+                        <!-- ListBoxItem dark theme style -->
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="Foreground" Value="{DynamicResource App.ControlForegroundBrush}" />
+                            <Setter Property="Padding" Value="6,3" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Border"
+                                                Background="{TemplateBinding Background}"
+                                                BorderThickness="0"
+                                                Padding="{TemplateBinding Padding}"
+                                                SnapsToDevicePixels="True">
+                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.SurfaceBrush}" />
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource App.AccentBrush}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource App.SelectionTextBrush}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+
+                    </ResourceDictionary>
+                </Application.Resources>
+            </Application>

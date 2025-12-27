@@ -1821,28 +1821,54 @@ namespace FluxionJsSceneEditor
                 PropOpacityTextBox.Text = el.Opacity.ToString(CultureInfo.InvariantCulture);
                 PropOpacitySlider.Value = el.Opacity;
 
-                if (el is TextElement te)
-                {
-                    PropTextContentTextBox.Text = te.Text ?? string.Empty;
-                    PropFontSizeTextBox.Text = te.FontSize.ToString(CultureInfo.InvariantCulture);
-                    PropFontFamilyTextBox.Text = te.FontFamily ?? string.Empty;
-                    PropTextColorTextBox.Text = te.Color ?? string.Empty;
-                    UpdateColorSwatchFromText(PropTextColorTextBox.Text);
+                        if (el is TextElement te)
+                        {
+                            PropTextContentTextBox.Text = te.Text ?? string.Empty;
+                            PropFontSizeTextBox.Text = te.FontSize.ToString(CultureInfo.InvariantCulture);
+                            PropFontFamilyTextBox.Text = te.FontFamily ?? string.Empty;
+                            PropTextColorTextBox.Text = te.Color ?? string.Empty;
+                            UpdateColorSwatchFromText(PropTextColorTextBox.Text);
+                        }
+                        else if (el is AudioElement ae)
+                        {
+                            PropAudioSrcTextBox.Text = ae.Src ?? string.Empty;
+                            PropAudioLoopCheckBox.IsChecked = ae.Loop;
+                            PropAudioAutoplayCheckBox.IsChecked = ae.Autoplay;
+                            PropAudioStopOnSceneChangeCheckBox.IsChecked = ae.StopOnSceneChange;
+                        }
+                        else if (el is AnimatedSpriteElement ase)
+                        {
+                            PropAnimImageSrcTextBox.Text = ase.ImageSrc ?? string.Empty;
+                            PropFrameWidthTextBox.Text = ase.FrameWidth.ToString(CultureInfo.InvariantCulture);
+                            PropFrameHeightTextBox.Text = ase.FrameHeight.ToString(CultureInfo.InvariantCulture);
+                            RefreshAnimationsList(ase);
+                        }
+                        else if (el is SpriteElement se)
+                        {
+                            PropImageSrcTextBox.Text = se.ImageSrc ?? string.Empty;
+                        }
+                        else
+                        {
+                            ClearSelectedAnimationProps();
+                        }
+                    }
+                    finally
+                    {
+                        _isUpdatingPropertiesPanel = false;
+                    }
+
+                    // Manually trigger animation selection for AnimatedSprite after _isUpdatingPropertiesPanel is reset
+                    if (el is AnimatedSpriteElement aseAfter && AnimationsListBox.SelectedItem is ListBoxItem selectedItem && selectedItem.Tag is AnimationModel selectedAnim)
+                    {
+                        _selectedAnimation = selectedAnim;
+                        PropAnimNameTextBox.Text = selectedAnim.Name;
+                        PropAnimSpeedTextBox.Text = selectedAnim.Speed.ToString(CultureInfo.InvariantCulture);
+                        PropAnimLoopCheckBox.IsChecked = selectedAnim.Loop;
+                        PropAnimAutoplayCheckBox.IsChecked = selectedAnim.Autoplay;
+                        RefreshFramesList();
+                        SelectedAnimationPropsGroup.Visibility = Visibility.Visible;
+                    }
                 }
-                else if (el is AnimatedSpriteElement ase)
-                {
-                    RefreshAnimationsList(ase);
-                }
-                else
-                {
-                    ClearSelectedAnimationProps();
-                }
-            }
-            finally
-            {
-                _isUpdatingPropertiesPanel = false;
-            }
-        }
 
         private void ApplyPropertiesFromPanel()
         {
@@ -1953,6 +1979,7 @@ namespace FluxionJsSceneEditor
                 ae.Src = PropAudioSrcTextBox.Text;
                 ae.Loop = PropAudioLoopCheckBox.IsChecked == true;
                 ae.Autoplay = PropAudioAutoplayCheckBox.IsChecked == true;
+                ae.StopOnSceneChange = PropAudioStopOnSceneChangeCheckBox.IsChecked == true;
             }
 
             if (_selected is ClickableElement ceSel2)
@@ -2512,6 +2539,7 @@ namespace FluxionJsSceneEditor
                 Src = string.Empty,
                 Loop = false,
                 Autoplay = false,
+                StopOnSceneChange = false,
                 Layer = 0,
                 Opacity = 255,
                 Active = true

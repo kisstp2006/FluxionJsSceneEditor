@@ -84,6 +84,7 @@ namespace FluxionJsSceneEditor
         public string? Src { get; set; }
         public bool Loop { get; set; }
         public bool Autoplay { get; set; }
+        public bool StopOnSceneChange { get; set; }
 
         public AudioElement()
         {
@@ -243,6 +244,7 @@ namespace FluxionJsSceneEditor
                             $"src=\"{Escape(ae.Src ?? string.Empty)}\" " +
                             $"loop=\"{ae.Loop.ToString().ToLowerInvariant()}\" " +
                             $"autoplay=\"{ae.Autoplay.ToString().ToLowerInvariant()}\" " +
+                            $"stopOnSceneChange=\"{ae.StopOnSceneChange.ToString().ToLowerInvariant()}\" " +
                             $"layer=\"{ae.Layer.ToString(CultureInfo.InvariantCulture)}\" />");
                         break;
 
@@ -548,6 +550,7 @@ namespace FluxionJsSceneEditor
                             Src = GetAttrAnyCase(n, "src", "Src"),
                             Loop = ParseBool(GetAttrAnyCase(n, "loop", "Loop")),
                             Autoplay = ParseBool(GetAttrAnyCase(n, "autoplay", "Autoplay")),
+                            StopOnSceneChange = ParseBoolOrDefault(GetAttrAnyCase(n, "stopOnSceneChange", "StopOnSceneChange"), false),
                             Layer = ParseIntOrDefault(GetAttrAnyCase(n, "layer", "Layer"), 0),
                             Active = ParseBoolOrDefault(GetAttrAnyCase(n, "Active", "active"), true)
                         });

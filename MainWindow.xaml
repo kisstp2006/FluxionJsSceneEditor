@@ -801,6 +801,12 @@
                                         <CheckBox x:Name="PropAudioAutoplayCheckBox"
                                                 Style="{StaticResource PropCheckBoxStyle}"
                                                 Content="Autoplay"
+                                                Margin="0,0,14,0"
+                                                Checked="PropCheckBox_Changed"
+                                                Unchecked="PropCheckBox_Changed"/>
+                                        <CheckBox x:Name="PropAudioStopOnSceneChangeCheckBox"
+                                                Style="{StaticResource PropCheckBoxStyle}"
+                                                Content="Stop On Scene Change"
                                                 Checked="PropCheckBox_Changed"
                                                 Unchecked="PropCheckBox_Changed"/>
                                     </StackPanel>
