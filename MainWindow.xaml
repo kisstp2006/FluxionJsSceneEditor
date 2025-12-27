@@ -178,6 +178,19 @@
                             <Button Content="Refresh"
                                     Click="RefreshProjectButton_Click"
                                     Margin="0,0,8,0"/>
+
+                            <TextBlock Text="View:"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,6,0"/>
+                            <ComboBox x:Name="ProjectAssetsViewModeComboBox"
+                                      Width="90"
+                                      SelectedIndex="0"
+                                      SelectionChanged="ProjectAssetsViewModeComboBox_SelectionChanged"
+                                      Margin="0,0,10,0">
+                                <ComboBoxItem Content="Tree" />
+                                <ComboBoxItem Content="Tiles" />
+                            </ComboBox>
+
                             <TextBlock Text="Folder:"
                                     VerticalAlignment="Center"
                                     Margin="0,0,6,0"/>
@@ -187,12 +200,21 @@
                                     TextWrapping="Wrap"/>
                         </StackPanel>
 
-                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                        <ScrollViewer x:Name="ProjectTreeScrollViewer"
+                                      VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled"
                                       Height="330">
                             <TreeView x:Name="ProjectTreeView"
                                       MouseDoubleClick="ProjectTreeView_MouseDoubleClick"
                                       KeyDown="ProjectTreeView_KeyDown"/>
+                        </ScrollViewer>
+
+                        <ScrollViewer x:Name="ProjectTilesScrollViewer"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Height="330"
+                                      Visibility="Collapsed">
+                            <WrapPanel x:Name="ProjectTilesPanel" />
                         </ScrollViewer>
                     </DockPanel>
                 </GroupBox>
