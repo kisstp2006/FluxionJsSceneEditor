@@ -186,9 +186,14 @@
                                     Text="(none)"
                                     TextWrapping="Wrap"/>
                         </StackPanel>
-                        <TreeView x:Name="ProjectTreeView"
-                                MouseDoubleClick="ProjectTreeView_MouseDoubleClick"
-                                KeyDown="ProjectTreeView_KeyDown"/>
+
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Height="330">
+                            <TreeView x:Name="ProjectTreeView"
+                                      MouseDoubleClick="ProjectTreeView_MouseDoubleClick"
+                                      KeyDown="ProjectTreeView_KeyDown"/>
+                        </ScrollViewer>
                     </DockPanel>
                 </GroupBox>
 
